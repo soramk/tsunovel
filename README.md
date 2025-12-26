@@ -37,6 +37,16 @@ Web小説を収集（積ん読）し、自分好みの快適な環境で読む�
 - ダミーデータベースから検索結果を表示
 - 検索結果をクリックしてライブラリに追加
 
+### 4. Web小説ダウンロード機能
+
+- **URL入力**: Web小説サイトのURLを入力して小説をダウンロード
+- **対応サイト**: 
+  - 小説家になろう (syosetu.com)
+  - カクヨム (kakuyomu.jp)
+  - その他のWeb小説サイト（汎用パーサー）
+- **自動取得**: タイトル、著者、本文を自動で取得
+- **バックエンドAPI**: サーバーレス関数（Vercel Functions）を使用
+
 ## セットアップ
 
 ### 必要な環境
@@ -68,11 +78,14 @@ tsunovel/
 │   ├── App.jsx          # メインコンポーネント
 │   ├── main.jsx         # Reactエントリーポイント
 │   └── index.css        # Tailwind CSS設定
+├── api/
+│   └── fetch-novel.js   # Web小説取得API（Vercel Functions）
 ├── index.html           # HTMLエントリーポイント
 ├── package.json         # 依存関係
 ├── vite.config.js       # Vite設定
 ├── tailwind.config.js   # Tailwind CSS設定
-└── postcss.config.js    # PostCSS設定
+├── postcss.config.js    # PostCSS設定
+└── vercel.json          # Vercel設定（API用）
 ```
 
 ## データ構造
@@ -121,6 +134,52 @@ gh-pages -d dist
 ```
 
 **注意**: `vite.config.js`の`base`設定がリポジトリ名（`/tsunovel/`）に合わせて設定されています。リポジトリ名が異なる場合は、`vite.config.js`の`base`を変更してください。
+
+## Web小説ダウンロード機能のセットアップ
+
+### バックエンドAPIのデプロイ
+
+Web小説ダウンロード機能を使用するには、バックエンドAPIをデプロイする必要があります。
+
+#### オプション1: Vercelを使用（推奨）
+
+1. [Vercel](https://vercel.com)にアカウントを作成
+2. プロジェクトをVercelにインポート
+3. `api/fetch-novel.js`が自動的にデプロイされます
+4. デプロイされたAPIのURLを環境変数`VITE_API_URL`に設定
+
+#### オプション2: その他のサーバーレス環境
+
+- Netlify Functions
+- AWS Lambda
+- Google Cloud Functions
+- その他のNode.js対応サーバーレス環境
+
+### 環境変数の設定
+
+`.env`ファイルを作成して、APIエンドポイントを設定：
+
+```bash
+VITE_API_URL=https://your-api-domain.com/api/fetch-novel
+```
+
+### ローカル開発
+
+ローカルでAPIをテストする場合：
+
+```bash
+# Vercel CLIを使用
+npm install -g vercel
+vercel dev
+```
+
+または、別のサーバーでAPIを実行し、`VITE_API_URL`を設定してください。
+
+### 注意事項
+
+- **CORS**: ブラウザから直接Web小説サイトにアクセスすることはできません（CORS制限）
+- **利用規約**: 各Web小説サイトの利用規約を確認し、遵守してください
+- **レート制限**: 過度なリクエストを避け、適切な間隔でアクセスしてください
 
 ## ライセンス
 

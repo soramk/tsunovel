@@ -11,7 +11,10 @@ import {
   X,
   Type,
   Minus,
-  Maximize
+  Maximize,
+  Link,
+  Download,
+  Loader
 } from 'lucide-react';
 
 /**
@@ -93,6 +96,10 @@ export default function Tsunovel() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [addMode, setAddMode] = useState('search'); // 'search' or 'url'
+  const [urlInput, setUrlInput] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
 
   const [readerSettings, setReaderSettings] = useState({
     theme: 'sepia',
@@ -169,6 +176,78 @@ export default function Tsunovel() {
     setIsAddModalOpen(false);
     setSearchQuery('');
     setSearchResults([]);
+  };
+
+  const handleUrlDownload = async () => {
+    if (!urlInput.trim()) return;
+
+    setIsDownloading(true);
+    setDownloadProgress('小説情報を取得中...');
+
+    try {
+      // バックエンドAPIを呼び出し
+      // 環境変数でAPIエンドポイントを設定可能
+      // Vercelを使用する場合: import.meta.env.VITE_API_URL を設定
+      // または直接URLを指定
+      const apiUrl = import.meta.env.VITE_API_URL 
+        || (import.meta.env.DEV 
+          ? 'http://localhost:3000/api/fetch-novel'
+          : '/api/fetch-novel'); // GitHub Pagesの場合は相対パス
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: urlInput }),
+      });
+
+      if (!response.ok) {
+        throw new Error('小説の取得に失敗しました');
+      }
+
+      const data = await response.json();
+      
+      setDownloadProgress('ライブラリに追加中...');
+
+      const newNovel = {
+        id: Date.now(),
+        title: data.title || 'タイトル不明',
+        author: data.author || '著者不明',
+        site: data.site || new URL(urlInput).hostname,
+        status: 'unread',
+        progress: 0,
+        content: data.content || 'コンテンツを取得できませんでした。',
+        url: urlInput
+      };
+
+      setNovels([newNovel, ...novels]);
+      setIsAddModalOpen(false);
+      setUrlInput('');
+      setDownloadProgress('');
+    } catch (error) {
+      console.error('Error downloading novel:', error);
+      setDownloadProgress(`エラー: ${error.message}`);
+      // エラー時もモックデータとして追加（開発用）
+      setTimeout(() => {
+        const newNovel = {
+          id: Date.now(),
+          title: 'URLから取得した小説',
+          author: '著者名',
+          site: new URL(urlInput).hostname,
+          status: 'unread',
+          progress: 0,
+          content: `URL: ${urlInput}\n\n（注意：バックエンドAPIが設定されていないため、モックデータが表示されています。実際のAPIを設定してください。）`,
+          url: urlInput
+        };
+        setNovels([newNovel, ...novels]);
+        setIsAddModalOpen(false);
+        setUrlInput('');
+        setDownloadProgress('');
+      }, 2000);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const getReaderStyles = () => {
@@ -508,54 +587,153 @@ export default function Tsunovel() {
           >
             <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <Search size={18} className="text-indigo-600"/>
-                小説を検索
+                {addMode === 'search' ? (
+                  <>
+                    <Search size={18} className="text-indigo-600"/>
+                    小説を検索
+                  </>
+                ) : (
+                  <>
+                    <Link size={18} className="text-indigo-600"/>
+                    URLから追加
+                  </>
+                )}
               </h3>
               <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
+
+            {/* タブ切り替え */}
+            <div className="flex border-b border-gray-200 bg-gray-50">
+              <button
+                onClick={() => {
+                  setAddMode('search');
+                  setUrlInput('');
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                  addMode === 'search'
+                    ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Search size={16} className="inline mr-2" />
+                検索
+              </button>
+              <button
+                onClick={() => {
+                  setAddMode('url');
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                  addMode === 'url'
+                    ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <Link size={16} className="inline mr-2" />
+                URL
+              </button>
+            </div>
             
             <div className="p-4 overflow-y-auto flex-1 bg-white">
-              <div className="relative mb-6">
-                <input 
-                  type="text" 
-                  placeholder="キーワードを入力..." 
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  autoFocus
-                />
-                <Search className="absolute left-3 top-3.5 text-gray-400" size={18}/>
-              </div>
-              
-              {searchQuery && searchResults.length === 0 && (
-                <div className="text-center text-gray-400 py-8">
-                  検索結果が見つかりませんでした
-                </div>
-              )}
-              
-              {searchResults.length > 0 && (
-                 <div className="space-y-3">
-                    {searchResults.map((item, idx) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => addFromSearch(item)} 
-                        className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer group border border-transparent hover:border-gray-200 transition-all"
-                      >
-                         <div 
-                           className="w-10 h-14 bg-gray-200 rounded flex-shrink-0 bg-cover bg-center shadow-sm" 
-                           style={{backgroundImage: `url(https://picsum.photos/seed/${idx + 100}/100/150)`}}
-                         ></div>
-                         <div className="flex-1 min-w-0">
-                           <h4 className="font-bold text-gray-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{item.title}</h4>
-                           <p className="text-xs text-gray-500 mt-1">{item.author}</p>
-                           <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.desc}</p>
-                         </div>
-                         <Plus size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0"/>
+              {addMode === 'search' ? (
+                <>
+                  <div className="relative mb-6">
+                    <input 
+                      type="text" 
+                      placeholder="キーワードを入力..." 
+                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50"
+                      value={searchQuery}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      autoFocus
+                    />
+                    <Search className="absolute left-3 top-3.5 text-gray-400" size={18}/>
+                  </div>
+                  
+                  {searchQuery && searchResults.length === 0 && (
+                    <div className="text-center text-gray-400 py-8">
+                      検索結果が見つかりませんでした
+                    </div>
+                  )}
+                  
+                  {searchResults.length > 0 && (
+                     <div className="space-y-3">
+                        {searchResults.map((item, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => addFromSearch(item)} 
+                            className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer group border border-transparent hover:border-gray-200 transition-all"
+                          >
+                             <div 
+                               className="w-10 h-14 bg-gray-200 rounded flex-shrink-0 bg-cover bg-center shadow-sm" 
+                               style={{backgroundImage: `url(https://picsum.photos/seed/${idx + 100}/100/150)`}}
+                             ></div>
+                             <div className="flex-1 min-w-0">
+                               <h4 className="font-bold text-gray-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{item.title}</h4>
+                               <p className="text-xs text-gray-500 mt-1">{item.author}</p>
+                               <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.desc}</p>
+                             </div>
+                             <Plus size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0"/>
+                          </div>
+                        ))}
+                     </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      小説のURLを入力
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="url" 
+                        placeholder="https://ncode.syosetu.com/..." 
+                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleUrlDownload()}
+                        disabled={isDownloading}
+                        autoFocus
+                      />
+                      <Link className="absolute left-3 top-3.5 text-gray-400" size={18}/>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      対応サイト: 小説家になろう、カクヨム、その他のWeb小説サイト
+                    </p>
+                  </div>
+
+                  {downloadProgress && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-blue-700">
+                        {isDownloading && <Loader size={16} className="animate-spin" />}
+                        <span>{downloadProgress}</span>
                       </div>
-                    ))}
-                 </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleUrlDownload}
+                    disabled={!urlInput.trim() || isDownloading}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader size={18} className="animate-spin" />
+                        <span>ダウンロード中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download size={18} />
+                        <span>小説をダウンロード</span>
+                      </>
+                    )}
+                  </button>
+                </>
               )}
             </div>
           </div>

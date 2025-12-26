@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/fetch-novel.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/fetch-novel",
+      "destination": "/api/fetch-novel.js"
+    }
+  ]
+}
+
