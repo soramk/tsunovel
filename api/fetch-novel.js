@@ -30,13 +30,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Fetching novel from URL:', url);
     const novelData = await fetchNovelContent(url);
+    console.log('Novel data fetched successfully:', {
+      title: novelData.title,
+      author: novelData.author,
+      contentLength: novelData.content?.length || 0
+    });
     return res.status(200).json(novelData);
   } catch (error) {
     console.error('Error fetching novel:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ 
       error: 'Failed to fetch novel',
-      message: error.message 
+      message: error.message,
+      details: error.stack
     });
   }
 }
@@ -67,15 +75,20 @@ async function fetchNovelContent(url) {
  * 公式APIを使用してメタ情報を取得し、本文はHTMLから取得
  */
 async function fetchSyosetuNovel(url) {
+  console.log('Fetching Syosetu novel from:', url);
+  
   // URLからncodeを抽出
   const ncode = extractNcode(url);
+  console.log('Extracted ncode:', ncode);
+  
   if (!ncode) {
-    throw new Error('小説家になろうのURLからncodeを抽出できませんでした');
+    throw new Error(`小説家になろうのURLからncodeを抽出できませんでした。URL: ${url}`);
   }
 
   // なろう小説APIからメタ情報を取得
   // API仕様: https://dev.syosetu.com/man/api/
   const apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&of=t-w-s-gf-gl&ncode=${ncode}`;
+  console.log('Fetching from API:', apiUrl);
   
   let metaData = null;
   try {
@@ -85,22 +98,40 @@ async function fetchSyosetuNovel(url) {
       }
     });
 
+    console.log('API Response status:', apiResponse.status);
+
     if (apiResponse.ok) {
       const apiData = await apiResponse.json();
+      console.log('API Data received:', apiData);
       // APIのレスポンスは配列形式 [0]が作品情報
       if (apiData && apiData.length > 0 && apiData[0].title) {
         metaData = apiData[0];
+        console.log('Meta data extracted:', { title: metaData.title, writer: metaData.writer });
+      } else {
+        console.warn('API returned empty or invalid data');
       }
+    } else {
+      console.warn('API request failed with status:', apiResponse.status);
     }
   } catch (apiError) {
-    console.warn('APIからの取得に失敗しました。HTMLから取得を試みます:', apiError);
+    console.warn('APIからの取得に失敗しました。HTMLから取得を試みます:', apiError.message);
   }
 
   // 本文を取得するため、HTMLページにアクセス
   // 作品ページのURLを構築（最初の話を取得）
-  const novelPageUrl = url.includes('/n') 
-    ? url.replace(/\/$/, '') + '/1/'  // 最初の話
-    : `https://ncode.syosetu.com/${ncode}/1/`;
+  let novelPageUrl;
+  if (url.includes('/n') && !url.match(/\/\d+\/$/)) {
+    // URLが作品ページでない場合、最初の話のURLを構築
+    novelPageUrl = url.replace(/\/$/, '') + '/1/';
+  } else if (url.match(/\/\d+\/$/)) {
+    // 既に特定の話のURLの場合、そのまま使用
+    novelPageUrl = url;
+  } else {
+    // デフォルトで最初の話
+    novelPageUrl = `https://ncode.syosetu.com/${ncode}/1/`;
+  }
+  
+  console.log('Fetching HTML from:', novelPageUrl);
 
   const htmlResponse = await fetch(novelPageUrl, {
     headers: {
@@ -108,18 +139,24 @@ async function fetchSyosetuNovel(url) {
     }
   });
 
+  console.log('HTML Response status:', htmlResponse.status);
+
   if (!htmlResponse.ok) {
-    throw new Error(`HTTP error! status: ${htmlResponse.status}`);
+    throw new Error(`HTML取得エラー! status: ${htmlResponse.status}, URL: ${novelPageUrl}`);
   }
 
   const html = await htmlResponse.text();
+  console.log('HTML length:', html.length);
   
   // HTMLから本文を抽出
   const contentMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/);
+  console.log('Content match found:', !!contentMatch);
   
   // APIから取得したメタ情報を使用、なければHTMLから抽出
   const title = metaData?.title || extractTitleFromHtml(html);
   const author = metaData?.writer || extractAuthorFromHtml(html);
+  
+  console.log('Final data:', { title, author, hasContent: !!contentMatch });
   
   return {
     title: title || 'タイトル不明',
@@ -143,18 +180,41 @@ async function fetchSyosetuNovel(url) {
  * 例: https://ncode.syosetu.com/n1234ab/ → n1234ab
  */
 function extractNcode(url) {
+  console.log('Extracting ncode from URL:', url);
+  
   // ncode.syosetu.com/n1234ab/ の形式
   const match1 = url.match(/ncode\.syosetu\.com\/([a-z0-9]+)/i);
-  if (match1) return match1[1].toLowerCase();
+  if (match1) {
+    const ncode = match1[1].toLowerCase();
+    console.log('Matched pattern 1, ncode:', ncode);
+    return ncode;
+  }
   
   // novel18.syosetu.com/n1234ab/ の形式（R18）
   const match2 = url.match(/novel18\.syosetu\.com\/([a-z0-9]+)/i);
-  if (match2) return match2[1].toLowerCase();
+  if (match2) {
+    const ncode = match2[1].toLowerCase();
+    console.log('Matched pattern 2 (R18), ncode:', ncode);
+    return ncode;
+  }
   
-  // その他の形式
-  const match3 = url.match(/syosetu\.com\/.*\/([a-z0-9]+)/i);
-  if (match3) return match3[1].toLowerCase();
+  // その他の形式（例: https://syosetu.com/novel/n1234ab/）
+  const match3 = url.match(/syosetu\.com\/[^\/]*\/([a-z0-9]+)/i);
+  if (match3) {
+    const ncode = match3[1].toLowerCase();
+    console.log('Matched pattern 3, ncode:', ncode);
+    return ncode;
+  }
   
+  // より柔軟なマッチング（nで始まる6文字のコード）
+  const match4 = url.match(/\/(n[a-z0-9]{5,})\//i);
+  if (match4) {
+    const ncode = match4[1].toLowerCase();
+    console.log('Matched pattern 4 (flexible), ncode:', ncode);
+    return ncode;
+  }
+  
+  console.warn('No ncode pattern matched');
   return null;
 }
 

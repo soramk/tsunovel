@@ -136,84 +136,46 @@ gh-pages -d dist
 
 **注意**: `vite.config.js`の`base`設定がリポジトリ名（`/tsunovel/`）に合わせて設定されています。リポジトリ名が異なる場合は、`vite.config.js`の`base`を変更してください。
 
-## Web小説ダウンロード機能のセットアップ
+## Web小説ダウンロード機能
 
-### 環境変数の設定（必須）
+### 概要
 
-1. プロジェクトルートに `.env` ファイルを作成します
+フロントエンドから直接小説家になろうの公式APIを使用して小説情報を取得します。**バックエンドAPIは不要**です。
 
-2. 以下の内容を記述します：
+### 対応サイト
 
-```bash
-# APIエンドポイントの設定
-VITE_API_URL=https://your-api-domain.com/api/fetch-novel
-```
+- **小説家になろう** (syosetu.com) - 公式APIを使用
+- その他のサイトはCORS制限により現在サポートされていません
 
-**設定例:**
+### 使用方法
 
-- **Vercelを使用する場合:**
-  ```
-  VITE_API_URL=https://tsunovel-api.vercel.app/api/fetch-novel
-  ```
+1. 「小説を追加」ボタンをクリック
+2. 「URL」タブを選択
+3. 小説家になろうのURLを入力（例: `https://ncode.syosetu.com/n1234ab/`）
+4. 「小説をダウンロード」ボタンをクリック
 
-- **ローカル開発の場合:**
-  ```
-  VITE_API_URL=http://localhost:3000/api/fetch-novel
-  ```
+### 取得できる情報
 
-- **空欄の場合:**
-  - 開発環境: `http://localhost:3000/api/fetch-novel` が自動的に使用されます
-  - 本番環境: `/api/fetch-novel`（相対パス）が使用されます
+- タイトル
+- 著者名
+- あらすじ
+- 初回掲載日
+- 最終掲載日
+- ジャンル
 
-3. 環境変数を変更したら、開発サーバーを再起動してください
+**注意**: 本文は取得できません（CORS制限のため）。あらすじとURLが表示されます。
 
-**注意:**
-- `.env`ファイルはGitにコミットされません（`.gitignore`に含まれています）
-- 環境変数名は`VITE_`で始める必要があります（Viteの要件）
+### 技術詳細
 
-### バックエンドAPIのデプロイ
-
-Web小説ダウンロード機能を使用するには、バックエンドAPIをデプロイする必要があります。
-
-#### オプション1: Vercelを使用（推奨）
-
-1. [Vercel](https://vercel.com)にアカウントを作成
-2. プロジェクトをVercelにインポート
-3. `api/fetch-novel.js`が自動的にデプロイされます
-4. デプロイされたAPIのURLを環境変数`VITE_API_URL`に設定
-
-#### オプション2: その他のサーバーレス環境
-
-- Netlify Functions
-- AWS Lambda
-- Google Cloud Functions
-- その他のNode.js対応サーバーレス環境
-
-### 環境変数の設定
-
-`.env`ファイルを作成して、APIエンドポイントを設定：
-
-```bash
-VITE_API_URL=https://your-api-domain.com/api/fetch-novel
-```
-
-### ローカル開発
-
-ローカルでAPIをテストする場合：
-
-```bash
-# Vercel CLIを使用
-npm install -g vercel
-vercel dev
-```
-
-または、別のサーバーでAPIを実行し、`VITE_API_URL`を設定してください。
+- **API**: [小説家になろう公式API](https://dev.syosetu.com/man/api/)
+- **実装**: フロントエンドから直接APIを呼び出し（`src/utils/novelFetcher.js`）
+- **CORS**: 小説家になろうのAPIはCORSを許可しているため、ブラウザから直接アクセス可能
 
 ### 注意事項
 
-- **CORS**: ブラウザから直接Web小説サイトにアクセスすることはできません（CORS制限）
-- **利用規約**: 各Web小説サイトの利用規約を確認し、遵守してください
-- **レート制限**: 過度なリクエストを避け、適切な間隔でアクセスしてください
+- **利用規約**: 小説家になろうの利用規約を確認し、遵守してください
+- **レート制限**: APIの利用制限（1日80,000リクエストまたは400MB）に注意してください
+- **CORSエラー**: 他のサイトから取得する場合はCORSエラーが発生します
 
 ## ライセンス
 

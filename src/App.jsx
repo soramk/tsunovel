@@ -16,6 +16,7 @@ import {
   Download,
   Loader
 } from 'lucide-react';
+import { fetchNovelContent } from './utils/novelFetcher';
 
 /**
  * Tsunovel - Prototype v5
@@ -185,29 +186,12 @@ export default function Tsunovel() {
     setDownloadProgress('小説情報を取得中...');
 
     try {
-      // バックエンドAPIを呼び出し
-      // 環境変数でAPIエンドポイントを設定可能
-      // Vercelを使用する場合: import.meta.env.VITE_API_URL を設定
-      // または直接URLを指定
-      const apiUrl = import.meta.env.VITE_API_URL 
-        || (import.meta.env.DEV 
-          ? 'http://localhost:3000/api/fetch-novel'
-          : '/api/fetch-novel'); // GitHub Pagesの場合は相対パス
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: urlInput }),
-      });
-
-      if (!response.ok) {
-        throw new Error('小説の取得に失敗しました');
-      }
-
-      const data = await response.json();
+      console.log('Fetching novel from URL:', urlInput);
       
+      // フロントエンドから直接小説情報を取得
+      const data = await fetchNovelContent(urlInput);
+      
+      console.log('Novel data fetched:', data);
       setDownloadProgress('ライブラリに追加中...');
 
       const newNovel = {
@@ -225,28 +209,17 @@ export default function Tsunovel() {
       setIsAddModalOpen(false);
       setUrlInput('');
       setDownloadProgress('');
+      setIsDownloading(false);
     } catch (error) {
       console.error('Error downloading novel:', error);
-      setDownloadProgress(`エラー: ${error.message}`);
-      // エラー時もモックデータとして追加（開発用）
+      const errorMessage = error.message || '不明なエラーが発生しました';
+      setDownloadProgress(`エラー: ${errorMessage}`);
+      
+      // エラーメッセージは既にUIに表示されているため、5秒後にリセット
       setTimeout(() => {
-        const newNovel = {
-          id: Date.now(),
-          title: 'URLから取得した小説',
-          author: '著者名',
-          site: new URL(urlInput).hostname,
-          status: 'unread',
-          progress: 0,
-          content: `URL: ${urlInput}\n\n（注意：バックエンドAPIが設定されていないため、モックデータが表示されています。実際のAPIを設定してください。）`,
-          url: urlInput
-        };
-        setNovels([newNovel, ...novels]);
-        setIsAddModalOpen(false);
-        setUrlInput('');
-        setDownloadProgress('');
-      }, 2000);
-    } finally {
-      setIsDownloading(false);
+        setIsDownloading(false);
+        // エラーメッセージは残しておく（ユーザーが確認できるように）
+      }, 5000);
     }
   };
 
@@ -708,11 +681,33 @@ export default function Tsunovel() {
                   </div>
 
                   {downloadProgress && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-blue-700">
-                        {isDownloading && <Loader size={16} className="animate-spin" />}
-                        <span>{downloadProgress}</span>
+                    <div className={`mb-4 p-3 rounded-lg border ${
+                      downloadProgress.startsWith('エラー:') 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-blue-50 border-blue-200'
+                    }`}>
+                      <div className={`flex items-center gap-2 text-sm ${
+                        downloadProgress.startsWith('エラー:') 
+                          ? 'text-red-700' 
+                          : 'text-blue-700'
+                      }`}>
+                        {isDownloading && !downloadProgress.startsWith('エラー:') && (
+                          <Loader size={16} className="animate-spin" />
+                        )}
+                        <span className="flex-1">{downloadProgress}</span>
                       </div>
+                      {downloadProgress.startsWith('エラー:') && (
+                        <div className="mt-2 text-xs text-red-600">
+                          <p>考えられる原因:</p>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            <li>バックエンドAPIが設定されていない</li>
+                            <li>API URLが正しくない</li>
+                            <li>ネットワークエラー</li>
+                            <li>URLが無効</li>
+                          </ul>
+                          <p className="mt-2">詳細はブラウザのコンソール（F12）を確認してください。</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
