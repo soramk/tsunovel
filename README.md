@@ -137,6 +137,39 @@ gh-pages -d dist
 
 ## Web小説ダウンロード機能のセットアップ
 
+### 環境変数の設定（必須）
+
+1. プロジェクトルートに `.env` ファイルを作成します
+
+2. 以下の内容を記述します：
+
+```bash
+# APIエンドポイントの設定
+VITE_API_URL=https://your-api-domain.com/api/fetch-novel
+```
+
+**設定例:**
+
+- **Vercelを使用する場合:**
+  ```
+  VITE_API_URL=https://tsunovel-api.vercel.app/api/fetch-novel
+  ```
+
+- **ローカル開発の場合:**
+  ```
+  VITE_API_URL=http://localhost:3000/api/fetch-novel
+  ```
+
+- **空欄の場合:**
+  - 開発環境: `http://localhost:3000/api/fetch-novel` が自動的に使用されます
+  - 本番環境: `/api/fetch-novel`（相対パス）が使用されます
+
+3. 環境変数を変更したら、開発サーバーを再起動してください
+
+**注意:**
+- `.env`ファイルはGitにコミットされません（`.gitignore`に含まれています）
+- 環境変数名は`VITE_`で始める必要があります（Viteの要件）
+
 ### バックエンドAPIのデプロイ
 
 Web小説ダウンロード機能を使用するには、バックエンドAPIをデプロイする必要があります。

@@ -646,7 +646,7 @@ export default function Tsunovel() {
                     <input 
                       type="text" 
                       placeholder="キーワードを入力..." 
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50"
+                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50 text-gray-900 placeholder:text-gray-400"
                       value={searchQuery}
                       onChange={(e) => handleSearch(e.target.value)}
                       autoFocus
@@ -693,7 +693,7 @@ export default function Tsunovel() {
                       <input 
                         type="url" 
                         placeholder="https://ncode.syosetu.com/..." 
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50"
+                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50 text-gray-900 placeholder:text-gray-400 disabled:bg-gray-100 disabled:text-gray-500"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleUrlDownload()}
