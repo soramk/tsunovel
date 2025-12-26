@@ -89,6 +89,39 @@ const novel = {
 };
 ```
 
+## GitHub Pagesでの公開
+
+このプロジェクトはGitHub Pagesで自動デプロイされるように設定されています。
+
+### デプロイ手順
+
+1. **リポジトリの設定**
+   - GitHubリポジトリの Settings > Pages に移動
+   - Source を "GitHub Actions" に設定
+
+2. **自動デプロイ**
+   - `main`ブランチにプッシュすると、自動的にビルドとデプロイが実行されます
+   - デプロイの進行状況は Actions タブで確認できます
+
+3. **公開URL**
+   - デプロイ完了後、以下のURLでアクセスできます：
+   - `https://[あなたのユーザー名].github.io/tsunovel/`
+
+### 手動デプロイ（オプション）
+
+自動デプロイを使わない場合：
+
+```bash
+# ビルド
+npm run build
+
+# gh-pagesパッケージを使用する場合
+npm install -g gh-pages
+gh-pages -d dist
+```
+
+**注意**: `vite.config.js`の`base`設定がリポジトリ名（`/tsunovel/`）に合わせて設定されています。リポジトリ名が異なる場合は、`vite.config.js`の`base`を変更してください。
+
 ## ライセンス
 
 このプロジェクトはプロトタイプです。
