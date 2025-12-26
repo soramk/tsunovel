@@ -64,37 +64,114 @@ async function fetchNovelContent(url) {
 
 /**
  * 小説家になろうの小説を取得
+ * 公式APIを使用してメタ情報を取得し、本文はHTMLから取得
  */
 async function fetchSyosetuNovel(url) {
-  const response = await fetch(url, {
+  // URLからncodeを抽出
+  const ncode = extractNcode(url);
+  if (!ncode) {
+    throw new Error('小説家になろうのURLからncodeを抽出できませんでした');
+  }
+
+  // なろう小説APIからメタ情報を取得
+  // API仕様: https://dev.syosetu.com/man/api/
+  const apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&of=t-w-s-gf-gl&ncode=${ncode}`;
+  
+  let metaData = null;
+  try {
+    const apiResponse = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    if (apiResponse.ok) {
+      const apiData = await apiResponse.json();
+      // APIのレスポンスは配列形式 [0]が作品情報
+      if (apiData && apiData.length > 0 && apiData[0].title) {
+        metaData = apiData[0];
+      }
+    }
+  } catch (apiError) {
+    console.warn('APIからの取得に失敗しました。HTMLから取得を試みます:', apiError);
+  }
+
+  // 本文を取得するため、HTMLページにアクセス
+  // 作品ページのURLを構築（最初の話を取得）
+  const novelPageUrl = url.includes('/n') 
+    ? url.replace(/\/$/, '') + '/1/'  // 最初の話
+    : `https://ncode.syosetu.com/${ncode}/1/`;
+
+  const htmlResponse = await fetch(novelPageUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
   });
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  if (!htmlResponse.ok) {
+    throw new Error(`HTTP error! status: ${htmlResponse.status}`);
   }
 
-  const html = await response.text();
+  const html = await htmlResponse.text();
   
-  // HTMLパース（簡易版 - 実際にはcheerioやjsdomを使用推奨）
-  const titleMatch = html.match(/<p class="novel_title">([^<]+)<\/p>/);
-  const authorMatch = html.match(/<p class="novel_writername">([^<]+)<\/p>/);
+  // HTMLから本文を抽出
   const contentMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/);
-
-  // 複数話がある場合は最初の話を取得
-  // 実際の実装では、全話を取得する処理が必要
+  
+  // APIから取得したメタ情報を使用、なければHTMLから抽出
+  const title = metaData?.title || extractTitleFromHtml(html);
+  const author = metaData?.writer || extractAuthorFromHtml(html);
   
   return {
-    title: titleMatch ? titleMatch[1].trim() : 'タイトル不明',
-    author: authorMatch ? authorMatch[1].trim() : '著者不明',
+    title: title || 'タイトル不明',
+    author: author || '著者不明',
     site: '小説家になろう',
     content: contentMatch 
       ? cleanHtmlContent(contentMatch[1])
       : 'コンテンツを取得できませんでした。',
-    url: url
+    url: url,
+    ncode: ncode,
+    // APIから取得した追加情報
+    story: metaData?.story || '',
+    genre: metaData?.genre || '',
+    general_firstup: metaData?.general_firstup || '',
+    general_lastup: metaData?.general_lastup || ''
   };
+}
+
+/**
+ * URLからncodeを抽出
+ * 例: https://ncode.syosetu.com/n1234ab/ → n1234ab
+ */
+function extractNcode(url) {
+  // ncode.syosetu.com/n1234ab/ の形式
+  const match1 = url.match(/ncode\.syosetu\.com\/([a-z0-9]+)/i);
+  if (match1) return match1[1].toLowerCase();
+  
+  // novel18.syosetu.com/n1234ab/ の形式（R18）
+  const match2 = url.match(/novel18\.syosetu\.com\/([a-z0-9]+)/i);
+  if (match2) return match2[1].toLowerCase();
+  
+  // その他の形式
+  const match3 = url.match(/syosetu\.com\/.*\/([a-z0-9]+)/i);
+  if (match3) return match3[1].toLowerCase();
+  
+  return null;
+}
+
+/**
+ * HTMLからタイトルを抽出（フォールバック用）
+ */
+function extractTitleFromHtml(html) {
+  const titleMatch = html.match(/<p class="novel_title">([^<]+)<\/p>/);
+  return titleMatch ? titleMatch[1].trim() : null;
+}
+
+/**
+ * HTMLから著者名を抽出（フォールバック用）
+ */
+function extractAuthorFromHtml(html) {
+  const authorMatch = html.match(/<p class="novel_writername">([^<]+)<\/p>/);
+  return authorMatch ? authorMatch[1].trim() : null;
 }
 
 /**
