@@ -1,0 +1,95 @@
+# Tsunovel - Web Novel Reader App
+
+Web小説を収集（積ん読）し、自分好みの快適な環境で読むためのリーダーアプリのプロトタイプです。
+
+## コンセプト
+
+「集める楽しさ」と「没頭できる読書体験」の両立を目指しています。特にライブラリ画面では、物理的な本棚から本を取り出して開くようなリッチなアニメーション体験を重視しています。
+
+## 技術スタック
+
+- **Framework**: React (Functional Components, Hooks)
+- **Styling**: Tailwind CSS
+- **Icons**: lucide-react
+- **Build Tool**: Vite
+
+## 主な機能
+
+### 1. ライブラリ画面 (Library View)
+
+- **3Dブック表現**: CSS 3D Transformsを使用した物理的な本のレンダリング
+- **インタラクション**:
+  - ホバー時: 本が少し浮き上がり、手前に傾く
+  - クリック時: 本が取り出され、表紙がめくれるアニメーション後にリーダー画面へ遷移
+- **デザイン**: ダークブラウンを基調とした木製の本棚風デザイン
+
+### 2. リーダー画面 (Reader View)
+
+- **没頭モード**: ヘッダー以外の装飾を排除した読書環境
+- **カスタマイズ機能**:
+  - テーマ切り替え: ライト / セピア / ダーク
+  - フォント切り替え: 明朝体 / ゴシック体
+  - 文字サイズ変更: 小 / 中 / 大
+
+### 3. 検索・追加機能
+
+- モーダルからキーワード検索
+- ダミーデータベースから検索結果を表示
+- 検索結果をクリックしてライブラリに追加
+
+## セットアップ
+
+### 必要な環境
+
+- Node.js (v16以上推奨)
+- npm または yarn
+
+### インストール
+
+```bash
+# 依存関係のインストール
+npm install
+
+# 開発サーバーの起動
+npm run dev
+
+# ビルド
+npm run build
+
+# ビルド結果のプレビュー
+npm run preview
+```
+
+## プロジェクト構造
+
+```
+tsunovel/
+├── src/
+│   ├── App.jsx          # メインコンポーネント
+│   ├── main.jsx         # Reactエントリーポイント
+│   └── index.css        # Tailwind CSS設定
+├── index.html           # HTMLエントリーポイント
+├── package.json         # 依存関係
+├── vite.config.js       # Vite設定
+├── tailwind.config.js   # Tailwind CSS設定
+└── postcss.config.js    # PostCSS設定
+```
+
+## データ構造
+
+```javascript
+const novel = {
+  id: number,
+  title: string,
+  author: string,
+  site: string,        // 出典サイト名
+  status: 'unread' | 'reading' | 'completed',
+  progress: number,    // 0-100
+  content: string      // 本文
+};
+```
+
+## ライセンス
+
+このプロジェクトはプロトタイプです。
+
