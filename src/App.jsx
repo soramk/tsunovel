@@ -499,11 +499,11 @@ export default function Tsunovel() {
       {viewMode === 'library' && (
         <>
           <header className="bg-[#1e1915] text-[#d7ccc8] shadow-2xl sticky top-0 z-30 border-b border-[#3e2723]">
-            <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src="/pict/title.png" alt="Tsunovel" className="h-10 w-auto" />
+            <div className="max-w-6xl mx-auto px-6">
+              <div className="flex flex-col items-center py-12">
+                <img src="/pict/title.png" alt="" className="h-48 md:h-72 w-auto mb-4" />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="absolute top-4 right-4 flex items-center gap-2">
                 <button
                   onClick={() => setViewMode('settings')}
                   className="p-2 text-[#d7ccc8] hover:bg-[#3e2723] rounded-lg transition-colors"
@@ -522,12 +522,8 @@ export default function Tsunovel() {
             </div>
           </header>
 
-          <main className="max-w-7xl mx-auto px-4 py-12 relative min-h-[calc(100vh-64px)]">
-
-            <div className="mb-10 flex items-end gap-4 px-2">
-              <h2 className="font-serif text-3xl font-bold text-[#d7ccc8] drop-shadow-md">My Bookshelf</h2>
-              <div className="h-[1px] flex-1 bg-gradient-to-r from-[#d7ccc8]/30 to-transparent mb-2"></div>
-            </div>
+          <main className="max-w-7xl mx-auto px-4 py-8 relative min-h-[calc(100vh-64px)]">
+            {/* Library Content */}
 
             {/* Bookshelf Grid */}
             <div className="min-h-[400px]">
@@ -558,25 +554,25 @@ export default function Tsunovel() {
                   <p className="text-xs">「小説を追加」から作品をダウンロードしてください</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap justify-center gap-x-12 gap-y-16 px-4 pb-20 max-w-5xl mx-auto">
+                <div className="flex flex-wrap justify-center -space-x-20 -space-y-12 px-4 pb-60 max-w-6xl mx-auto items-end pt-20">
                   {novels.map((novel, index) => {
                     const isOpening = openingBookId === novel.id;
                     const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
 
-                    // 「積読」感を出すためのランダムなオフセットと回転
-                    // シード値として id を利用して固定する
-                    const seed = (novel.id % 100) / 100;
-                    const rotate = (seed * 10 - 5).toFixed(1); // -5deg to 5deg
-                    const translateX = (seed * 20 - 10).toFixed(1); // -10px to 10px
-                    const translateY = (seed * 15 - 7.5).toFixed(1); // -7.5px to 7.5px
+                    // さらに大胆な「積読」感（大きな回転とオフセット）
+                    const seed = (novel.id % 40) / 40;
+                    const rotate = (seed * 30 - 15).toFixed(1); // -15deg to 15deg
+                    const translateX = (seed * 40 - 20).toFixed(1);
+                    const translateY = (seed * 60).toFixed(1);
 
                     return (
                       <div
                         key={novel.id}
-                        className={`relative group perspective-1000 ${isOpening ? 'z-50' : 'hover:z-40'}`}
+                        className={`relative group perspective-1500 ${isOpening ? 'z-50' : 'hover:z-40 z-10'}`}
                         style={{
                           transform: !isOpening ? `rotate(${rotate}deg) translate(${translateX}px, ${translateY}px)` : 'none',
-                          transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0s'
+                          transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0s',
+                          width: '200px'
                         }}
                       >
 
@@ -586,9 +582,9 @@ export default function Tsunovel() {
                           className={`
                         relative w-full aspect-[2/3] cursor-pointer preserve-3d ease-in-out
                         ${isOpening ? 'duration-[800ms]' : 'duration-300'}
-                        ${isOpening
-                              ? 'translate-z-[200px] -translate-y-[50px] scale-110 rotate-y-[-10deg]'
-                              : 'group-hover:translate-z-[30px] group-hover:-translate-y-[10px] group-hover:rotate-y-[-5deg]'
+                         ${isOpening
+                              ? 'translate-z-[300px] -translate-y-[100px] scale-125 rotate-y-[-10deg]'
+                              : 'group-hover:translate-z-[180px] group-hover:-translate-y-[60px] group-hover:rotate-y-[-15deg]'
                             }
                       `}
                           style={{ transformStyle: 'preserve-3d' }}
@@ -964,20 +960,20 @@ export default function Tsunovel() {
           )}
 
           {/* Sticky Reader Header */}
-          <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-current/10 backdrop-blur-md bg-opacity-80 p-3 h-14 flex items-center justify-center ${getReaderStyles().className}`}>
-            <div className="max-w-2xl w-full flex items-center justify-between px-4">
+          <header className={`fixed top-0 left-0 right-0 z-50 h-14 border-b border-current/10 flex items-center justify-center transition-colors duration-300 ${getReaderStyles().className.replace(/max-w-3xl|mx-auto|p-8|min-h-screen/g, '')}`}>
+            <div className="max-w-2xl w-full flex items-center justify-between px-6">
               <button
                 onClick={prevChapter}
                 disabled={currentChapter <= 1}
-                className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                className="w-9 h-9 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all"
                 title="前の話"
               >
                 <ArrowLeft size={18} />
               </button>
 
               <div className="flex flex-col items-center">
-                <span className="text-[10px] font-bold tracking-widest opacity-60 uppercase">
-                  {currentNovel?.title && currentNovel.title.length > 15 ? currentNovel.title.substring(0, 15) + '...' : currentNovel?.title}
+                <span className="text-[9px] font-bold tracking-[0.2em] opacity-50 uppercase truncate max-w-[150px]">
+                  {currentNovel?.title}
                 </span>
                 <span className="text-xs font-serif font-bold italic">
                   Episode {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
@@ -987,7 +983,7 @@ export default function Tsunovel() {
               <button
                 onClick={nextChapter}
                 disabled={!currentNovel || currentChapter >= (currentNovel.info?.general_all_no || 0)}
-                className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                className="w-9 h-9 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all"
                 title="次の話"
               >
                 <ArrowRight size={18} />
@@ -996,8 +992,8 @@ export default function Tsunovel() {
           </header>
 
           {/* Reader Content */}
-          <div className={getReaderStyles().className} style={getReaderStyles().style}>
-            <div className="max-w-2xl mx-auto pt-24 pb-32">
+          <div className={`${getReaderStyles().className} pt-20`} style={getReaderStyles().style}>
+            <div className="max-w-2xl mx-auto pb-32">
               <div className="mb-12 text-center border-b border-current/10 pb-8">
                 <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
                   {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
