@@ -154,18 +154,26 @@ export default function Tsunovel() {
       let novelContent = '';
       let infoData = novel.info || null;
 
-      const contentRes = await fetch(chapterUrl);
+      const fetchOptions = githubConfig.pat ? {
+        headers: {
+          'Authorization': `Bearer ${githubConfig.pat}`,
+          'Accept': 'application/vnd.github.v3.raw', // Rawデータを明示的に要求
+        }
+      } : {};
+
+      console.log('Fetching chapter from:', chapterUrl);
+      const contentRes = await fetch(chapterUrl, fetchOptions);
       if (contentRes.ok) {
         novelContent = await contentRes.text();
       } else if (chapterNum === 1) {
         // 互換性のため content.txt も試す
         const legacyUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/content.txt?t=${Date.now()}`;
-        const legacyRes = await fetch(legacyUrl);
+        const legacyRes = await fetch(legacyUrl, fetchOptions);
         if (legacyRes.ok) novelContent = await legacyRes.text();
       }
 
       if (!infoData) {
-        const infoRes = await fetch(infoUrl);
+        const infoRes = await fetch(infoUrl, fetchOptions);
         if (infoRes.ok) infoData = await infoRes.json();
       }
 

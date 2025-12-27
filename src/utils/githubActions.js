@@ -78,8 +78,15 @@ export async function fetchIndex(config) {
     const { owner, repo } = config;
     const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/storage/index.json?t=${Date.now()}`;
 
+    const fetchOptions = config.pat ? {
+        headers: {
+            'Authorization': `Bearer ${config.pat}`,
+            'Accept': 'application/vnd.github.v3.raw',
+        }
+    } : {};
+
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, fetchOptions);
         if (response.ok) {
             return await response.json();
         }
