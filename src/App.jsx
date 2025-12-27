@@ -501,7 +501,7 @@ export default function Tsunovel() {
           <header className="bg-[#1e1915] text-[#d7ccc8] shadow-2xl sticky top-0 z-30 border-b border-[#3e2723]">
             <div className="max-w-6xl mx-auto px-6">
               <div className="flex flex-col items-center py-12">
-                <img src="/pict/title.png" alt="" className="h-48 md:h-72 w-auto mb-4" />
+                <img src="pict/title.png" alt="" className="h-48 md:h-72 w-auto mb-4" />
               </div>
               <div className="absolute top-4 right-4 flex items-center gap-2">
                 <button
@@ -554,7 +554,7 @@ export default function Tsunovel() {
                   <p className="text-xs">「小説を追加」から作品をダウンロードしてください</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap justify-center -space-x-20 -space-y-12 px-4 pb-60 max-w-6xl mx-auto items-end pt-20">
+                <div className="flex flex-wrap justify-center -space-x-16 -space-y-12 px-4 pb-60 max-w-6xl mx-auto items-end pt-32">
                   {novels.map((novel, index) => {
                     const isOpening = openingBookId === novel.id;
                     const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
@@ -698,215 +698,209 @@ export default function Tsunovel() {
       {/* --- Reader Mode --- */}
       {viewMode === 'reader' && (
         <div className="bg-[#f3f0e9] min-h-screen animate-in fade-in duration-1000">
-          {/* Header */}
+          {/* Top Reader Bar */}
           <div className="fixed top-0 left-0 right-0 h-14 bg-[#f3f0e9]/95 backdrop-blur border-b border-[#e5e0d0] flex items-center justify-between px-4 z-20 transition-all">
-            <button onClick={closeReader} className="p-2 text-gray-600 hover:bg-[#e5e0d0] rounded-lg flex items-center gap-2 group">
-              <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-              <span className="text-sm font-medium font-serif">ライブラリに戻る</span>
+            <button
+              onClick={() => setIsTocOpen(!isTocOpen)}
+              className={`p-2 rounded-lg transition-colors ${isTocOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
+              title="目次"
+            >
+              <List size={20} />
             </button>
             <div className="text-sm font-bold text-gray-800 font-serif tracking-wide truncate max-w-[200px] sm:max-w-md">
               {novels.find(n => n.id === currentNovelId)?.title}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="relative" ref={settingsRef}>
               <button
-                onClick={() => setIsTocOpen(!isTocOpen)}
-                className={`p-2 rounded-lg transition-colors ${isTocOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
-                title="目次"
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`p-2 rounded-lg transition-colors ${isSettingsOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
+                title="表示設定"
               >
-                <List size={20} />
+                <Settings size={20} />
               </button>
-              <div className="relative" ref={settingsRef}>
-                <button
-                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                  className={`p-2 rounded-lg transition-colors ${isSettingsOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
-                  title="表示設定"
-                >
-                  <Settings size={20} />
-                </button>
-                {isSettingsOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-30 transition-all animate-in zoom-in-95 duration-200">
-                    <div className="space-y-6">
-                      {/* テーマ設定 */}
-                      <div>
-                        <div className="flex justify-between items-center mb-3">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">テーマ</label>
-                          <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded text-gray-500">{readerSettings.theme}</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { id: 'light', icon: Sun, label: 'ライト', class: 'bg-white text-gray-800' },
-                            { id: 'sepia', icon: Coffee, label: 'セピア', class: 'bg-[#f4ecd8] text-[#5b4636]' },
-                            { id: 'dark', icon: Moon, label: 'ダーク', class: 'bg-gray-800 text-gray-100' },
-                            { id: 'midnight', icon: Bookmark, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
-                            { id: 'ivory', icon: Type, label: 'アイボ', class: 'bg-[#fffff0] text-[#2d241e]' },
-                            { id: 'softgreen', icon: Book, label: 'グリーン', class: 'bg-[#f0f9f0] text-[#2d4a2d]' },
-                            { id: 'ocean', icon: MousePointer2, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
-                            { id: 'forest', icon: Plus, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
-                            { id: 'paper', icon: Book, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
-                            { id: 'coffee-deep', icon: Coffee, label: '珈琲', class: 'bg-[#3e2723] text-[#d7ccc8]' },
-                          ].map(t => (
-                            <button
-                              key={t.id}
-                              onClick={() => setReaderSettings({ ...readerSettings, theme: t.id })}
-                              className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${readerSettings.theme === t.id ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent hover:bg-gray-50'}`}
-                            >
-                              <div className={`w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-sm ${t.class} border border-gray-200`}>
-                                <t.icon size={14} />
-                              </div>
-                              <span className="text-[10px] font-bold">{t.label}</span>
-                            </button>
-                          ))}
-                        </div>
+              {isSettingsOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-30 transition-all animate-in zoom-in-95 duration-200">
+                  <div className="space-y-6">
+                    {/* テーマ設定 */}
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">テーマ</label>
+                        <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded text-gray-500">{readerSettings.theme}</span>
                       </div>
-
-                      {/* フォント設定 */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">フォント</label>
-                        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
-                          {[
-                            { id: 'serif', label: '標準明朝', font: 'font-serif' },
-                            { id: 'sans', label: '標準ゴシック', font: 'font-sans' },
-                            { id: 'noto-serif', label: 'Noto Serif', font: 'font-serif' },
-                            { id: 'noto-sans', label: 'Noto Sans', font: 'font-sans' },
-                            { id: 'mplus', label: 'M PLUS', font: 'font-sans' },
-                            { id: 'zen-kaku', label: 'Zen Kaku', font: 'font-sans' },
-                            { id: 'kaisei', label: 'Kaisei', font: 'font-serif' },
-                            { id: 'shippori', label: 'Shippori', font: 'font-serif' },
-                            { id: 'hina', label: 'Hina', font: 'font-serif' },
-                            { id: 'dotgothic', label: 'DotGothic', font: 'font-sans' },
-                            { id: 'courier', label: 'Courier', font: 'font-mono' },
-                          ].map(f => (
-                            <button
-                              key={f.id}
-                              onClick={() => setReaderSettings({ ...readerSettings, fontFamily: f.id })}
-                              className={`py-2 px-2 rounded-md text-xs transition-all ${readerSettings.fontFamily === f.id ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
-                            >
-                              <span className={f.font}>{f.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 文字色設定 */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字色</label>
-                        <div className="flex flex-wrap gap-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'light', icon: Sun, label: 'ライト', class: 'bg-white text-gray-800' },
+                          { id: 'sepia', icon: Coffee, label: 'セピア', class: 'bg-[#f4ecd8] text-[#5b4636]' },
+                          { id: 'dark', icon: Moon, label: 'ダーク', class: 'bg-gray-800 text-gray-100' },
+                          { id: 'midnight', icon: Bookmark, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
+                          { id: 'ivory', icon: Type, label: 'アイボ', class: 'bg-[#fffff0] text-[#2d241e]' },
+                          { id: 'softgreen', icon: Book, label: 'グリーン', class: 'bg-[#f0f9f0] text-[#2d4a2d]' },
+                          { id: 'ocean', icon: MousePointer2, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
+                          { id: 'forest', icon: Plus, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
+                          { id: 'paper', icon: Book, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
+                          { id: 'coffee-deep', icon: Coffee, label: '珈琲', class: 'bg-[#3e2723] text-[#d7ccc8]' },
+                        ].map(t => (
                           <button
-                            onClick={() => setReaderSettings({ ...readerSettings, textColor: '' })}
-                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${readerSettings.textColor === '' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white text-gray-400'}`}
-                            title="テーマのデフォルト色を使用"
+                            key={t.id}
+                            onClick={() => setReaderSettings({ ...readerSettings, theme: t.id })}
+                            className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${readerSettings.theme === t.id ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent hover:bg-gray-50'}`}
                           >
-                            自動
+                            <div className={`w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-sm ${t.class} border border-gray-200`}>
+                              <t.icon size={14} />
+                            </div>
+                            <span className="text-[10px] font-bold">{t.label}</span>
                           </button>
-                          {[
-                            '#000000', '#333333', '#666666', '#999999',
-                            '#d7ccc8', '#5b4636', '#1b5e20', '#004d40',
-                            '#0d47a1', '#b71c1c'
-                          ].map(color => (
-                            <button
-                              key={color}
-                              onClick={() => setReaderSettings({ ...readerSettings, textColor: color })}
-                              className={`w-8 h-8 rounded-full border-2 transition-all ${readerSettings.textColor === color ? 'border-indigo-500 scale-110' : 'border-transparent opacity-80 hover:opacity-100'}`}
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
-                          <div className="relative group">
-                            <input
-                              type="color"
-                              value={readerSettings.textColor || '#000000'}
-                              onChange={(e) => setReaderSettings({ ...readerSettings, textColor: e.target.value })}
-                              className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer overflow-hidden p-0"
-                            />
-                          </div>
-                        </div>
+                        ))}
                       </div>
+                    </div>
 
-                      {/* 文字サイズと行間 */}
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字サイズ</label>
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.max(12, readerSettings.fontSize - 1) })}
-                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                              title="小さく"
-                            >
-                              <Minus size={18} />
-                            </button>
-                            <input
-                              type="range"
-                              min="12"
-                              max="40"
-                              value={readerSettings.fontSize}
-                              onChange={(e) => setReaderSettings({ ...readerSettings, fontSize: parseInt(e.target.value) })}
-                              className="flex-1 accent-indigo-600 h-2"
-                            />
-                            <button
-                              onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.min(40, readerSettings.fontSize + 1) })}
-                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                              title="大きく"
-                            >
-                              <Plus size={18} />
-                            </button>
-                            <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">行間</label>
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(1.2, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
-                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                              title="狭く"
-                            >
-                              <Minus size={18} />
-                            </button>
-                            <input
-                              type="range"
-                              min="1.2"
-                              max="3.0"
-                              step="0.1"
-                              value={readerSettings.lineHeight}
-                              onChange={(e) => setReaderSettings({ ...readerSettings, lineHeight: parseFloat(e.target.value) })}
-                              className="flex-1 accent-indigo-600 h-2"
-                            />
-                            <button
-                              onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.min(3.0, Math.round((readerSettings.lineHeight + 0.1) * 10) / 10) })}
-                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                              title="広く"
-                            >
-                              <Plus size={18} />
-                            </button>
-                            <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
-                          </div>
-                        </div>
+                    {/* フォント設定 */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">フォント</label>
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
+                        {[
+                          { id: 'serif', label: '標準明朝', font: 'font-serif' },
+                          { id: 'sans', label: '標準ゴシック', font: 'font-sans' },
+                          { id: 'noto-serif', label: 'Noto Serif', font: 'font-serif' },
+                          { id: 'noto-sans', label: 'Noto Sans', font: 'font-sans' },
+                          { id: 'mplus', label: 'M PLUS', font: 'font-sans' },
+                          { id: 'zen-kaku', label: 'Zen Kaku', font: 'font-sans' },
+                          { id: 'kaisei', label: 'Kaisei', font: 'font-serif' },
+                          { id: 'shippori', label: 'Shippori', font: 'font-serif' },
+                          { id: 'hina', label: 'Hina', font: 'font-serif' },
+                          { id: 'dotgothic', label: 'DotGothic', font: 'font-sans' },
+                          { id: 'courier', label: 'Courier', font: 'font-mono' },
+                        ].map(f => (
+                          <button
+                            key={f.id}
+                            onClick={() => setReaderSettings({ ...readerSettings, fontFamily: f.id })}
+                            className={`py-2 px-2 rounded-md text-xs transition-all ${readerSettings.fontFamily === f.id ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
+                          >
+                            <span className={f.font}>{f.label}</span>
+                          </button>
+                        ))}
                       </div>
+                    </div>
 
-                      {/* 遷移設定 */}
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
-                          <MousePointer2 size={12} />
-                          次の話への遷移
-                        </label>
-                        <div className="flex bg-gray-100 rounded-lg p-1">
+                    {/* 文字色設定 */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字色</label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setReaderSettings({ ...readerSettings, textColor: '' })}
+                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${readerSettings.textColor === '' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white text-gray-400'}`}
+                          title="テーマのデフォルト色を使用"
+                        >
+                          自動
+                        </button>
+                        {[
+                          '#000000', '#333333', '#666666', '#999999',
+                          '#d7ccc8', '#5b4636', '#1b5e20', '#004d40',
+                          '#0d47a1', '#b71c1c'
+                        ].map(color => (
                           <button
-                            onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'button' })}
-                            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'button' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
-                          >
-                            ボタン
-                          </button>
-                          <button
-                            onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'scroll' })}
-                            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'scroll' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
-                          >
-                            スクロール
-                          </button>
+                            key={color}
+                            onClick={() => setReaderSettings({ ...readerSettings, textColor: color })}
+                            className={`w-8 h-8 rounded-full border-2 transition-all ${readerSettings.textColor === color ? 'border-indigo-500 scale-110' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                        <div className="relative group">
+                          <input
+                            type="color"
+                            value={readerSettings.textColor || '#000000'}
+                            onChange={(e) => setReaderSettings({ ...readerSettings, textColor: e.target.value })}
+                            className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer overflow-hidden p-0"
+                          />
                         </div>
                       </div>
                     </div>
+
+                    {/* 文字サイズと行間 */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字サイズ</label>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.max(12, readerSettings.fontSize - 1) })}
+                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                            title="小さく"
+                          >
+                            <Minus size={18} />
+                          </button>
+                          <input
+                            type="range"
+                            min="12"
+                            max="40"
+                            value={readerSettings.fontSize}
+                            onChange={(e) => setReaderSettings({ ...readerSettings, fontSize: parseInt(e.target.value) })}
+                            className="flex-1 accent-indigo-600 h-2"
+                          />
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.min(40, readerSettings.fontSize + 1) })}
+                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                            title="大きく"
+                          >
+                            <Plus size={18} />
+                          </button>
+                          <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">行間</label>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(1.2, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
+                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                            title="狭く"
+                          >
+                            <Minus size={18} />
+                          </button>
+                          <input
+                            type="range"
+                            min="1.2"
+                            max="3.0"
+                            step="0.1"
+                            value={readerSettings.lineHeight}
+                            onChange={(e) => setReaderSettings({ ...readerSettings, lineHeight: parseFloat(e.target.value) })}
+                            className="flex-1 accent-indigo-600 h-2"
+                          />
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.min(3.0, Math.round((readerSettings.lineHeight + 0.1) * 10) / 10) })}
+                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                            title="広く"
+                          >
+                            <Plus size={18} />
+                          </button>
+                          <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 遷移設定 */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                        <MousePointer2 size={12} />
+                        次の話への遷移
+                      </label>
+                      <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                          onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'button' })}
+                          className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'button' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
+                        >
+                          ボタン
+                        </button>
+                        <button
+                          onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'scroll' })}
+                          className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'scroll' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
+                        >
+                          スクロール
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -959,40 +953,58 @@ export default function Tsunovel() {
             </div>
           )}
 
-          {/* Sticky Reader Header */}
-          <header className={`fixed top-0 left-0 right-0 z-50 h-14 border-b border-current/10 flex items-center justify-center transition-colors duration-300 ${getReaderStyles().className.replace(/max-w-3xl|mx-auto|p-8|min-h-screen/g, '')}`}>
+          {/* Bottom Reader Navigation */}
+          <footer className={`fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-current/10 flex items-center justify-center transition-colors duration-300 backdrop-blur-md bg-opacity-90 ${getReaderStyles().className.replace(/max-w-3xl|mx-auto|p-8|min-h-screen/g, '')}`}>
             <div className="max-w-2xl w-full flex items-center justify-between px-6">
-              <button
-                onClick={prevChapter}
-                disabled={currentChapter <= 1}
-                className="w-9 h-9 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all"
-                title="前の話"
-              >
-                <ArrowLeft size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('library')}
+                  className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all"
+                  title="ライブラリに戻る"
+                >
+                  <Home size={20} />
+                </button>
+                <button
+                  onClick={prevChapter}
+                  disabled={currentChapter <= 1}
+                  className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                  title="前の話"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-[9px] font-bold tracking-[0.2em] opacity-50 uppercase truncate max-w-[150px]">
+                <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 uppercase truncate max-w-[120px]">
                   {currentNovel?.title}
                 </span>
-                <span className="text-xs font-serif font-bold italic">
-                  Episode {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
+                <span className="text-sm font-serif font-bold italic">
+                  {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
                 </span>
               </div>
 
-              <button
-                onClick={nextChapter}
-                disabled={!currentNovel || currentChapter >= (currentNovel.info?.general_all_no || 0)}
-                className="w-9 h-9 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all"
-                title="次の話"
-              >
-                <ArrowRight size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={nextChapter}
+                  disabled={!currentNovel || currentChapter >= (currentNovel.info?.general_all_no || 0)}
+                  className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                  title="次の話"
+                >
+                  <ArrowRight size={20} />
+                </button>
+                <button
+                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                  className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all"
+                  title="設定"
+                >
+                  <Settings size={20} />
+                </button>
+              </div>
             </div>
-          </header>
+          </footer>
 
           {/* Reader Content */}
-          <div className={`${getReaderStyles().className} pt-20`} style={getReaderStyles().style}>
+          <div className={`${getReaderStyles().className} pt-12`} style={getReaderStyles().style}>
             <div className="max-w-2xl mx-auto pb-32">
               <div className="mb-12 text-center border-b border-current/10 pb-8">
                 <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
