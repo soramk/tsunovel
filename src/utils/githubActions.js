@@ -72,7 +72,7 @@ export async function pollData(ncode, config) {
 }
 
 /**
- * 保存済みの小説一覧（docs/index.json）を取得する
+ * 保存済みの小説一覧（storage/index.json）を取得する
  */
 export async function fetchIndex(config) {
     const { owner, repo } = config;

@@ -79,14 +79,15 @@ tsunovel/
 │   ├── App.jsx          # メインコンポーネント
 │   ├── main.jsx         # Reactエントリーポイント
 │   └── index.css        # Tailwind CSS設定
-├── api/
-│   └── fetch-novel.js   # Web小説取得API（Vercel Functions）
+├── storage/             # 小説データ保存先（非公開推奨）
+├── scripts/
+│   └── fetch_novel.cjs  # 小説取得スクリプト（GitHub Actions用）
+├── .github/
+│   └── workflows/       # GitHub Actions設定
 ├── index.html           # HTMLエントリーポイント
 ├── package.json         # 依存関係
 ├── vite.config.js       # Vite設定
-├── tailwind.config.js   # Tailwind CSS設定
-├── postcss.config.js    # PostCSS設定
-└── vercel.json          # Vercel設定（API用）
+└── tailwind.config.js   # Tailwind CSS設定
 ```
 
 ## データ構造
