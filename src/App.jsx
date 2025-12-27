@@ -77,6 +77,7 @@ export default function Tsunovel() {
   });
 
   const [currentChapter, setCurrentChapter] = useState(1);
+  const [isLoadingChapter, setIsLoadingChapter] = useState(false);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const settingsRef = useRef(null);
