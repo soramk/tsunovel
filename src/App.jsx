@@ -68,6 +68,9 @@ export default function Tsunovel() {
     fontFamily: 'serif',
   });
 
+  const [currentChapter, setCurrentChapter] = useState(1);
+  const [isLoadingChapter, setIsLoadingChapter] = useState(false);
+
   const settingsRef = useRef(null);
 
   // 初期読み込み: docs/index.json から小説一覧を取得
@@ -116,24 +119,11 @@ export default function Tsunovel() {
 
     // コンテンツが未取得の場合は取得する
     if (novel && !novel.content) {
-      try {
-        setOpeningBookId(novelId);
-        const url = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/info.json?t=${Date.now()}`;
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          setNovels(prev => prev.map(n =>
-            n.id === novelId ? {
-              ...n,
-              content: data.story ? `【あらすじ】\n\n${data.story}\n\n\n※本文は小説家になろうのサイトで直接ご覧ください。` : 'コンテンツ情報がありません。'
-            } : n
-          ));
-        }
-      } catch (error) {
-        console.error('Error loading novel content:', error);
-      }
+      setOpeningBookId(novelId);
+      await loadChapter(novelId, 1);
     } else {
       setOpeningBookId(novelId);
+      setCurrentChapter(1);
     }
 
     // 1.5秒後に画面遷移
@@ -147,6 +137,66 @@ export default function Tsunovel() {
       ));
     }, 1500);
   };
+
+  /**
+   * 特定の話数を読み込む
+   */
+  const loadChapter = async (novelId, chapterNum) => {
+    const novel = novels.find(n => n.id === novelId);
+    if (!novel) return;
+
+    setIsLoadingChapter(true);
+    try {
+      // 1. chapters/{n}.txt の取得を試みる
+      const chapterUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/chapters/${chapterNum}.txt?t=${Date.now()}`;
+      const infoUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/info.json?t=${Date.now()}`;
+
+      let novelContent = '';
+      let infoData = novel.info || null;
+
+      const contentRes = await fetch(chapterUrl);
+      if (contentRes.ok) {
+        novelContent = await contentRes.text();
+      } else if (chapterNum === 1) {
+        // 互換性のため content.txt も試す
+        const legacyUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/content.txt?t=${Date.now()}`;
+        const legacyRes = await fetch(legacyUrl);
+        if (legacyRes.ok) novelContent = await legacyRes.text();
+      }
+
+      if (!infoData) {
+        const infoRes = await fetch(infoUrl);
+        if (infoRes.ok) infoData = await infoRes.json();
+      }
+
+      setNovels(prev => prev.map(n =>
+        n.id === novelId ? {
+          ...n,
+          content: novelContent || (chapterNum === 1 ? (infoData?.story ? `【あらすじ】\n\n${infoData.story}` : '本文を取得できませんでした。') : '指定された話数はまだ取得されていません。'),
+          info: infoData
+        } : n
+      ));
+      setCurrentChapter(chapterNum);
+    } catch (error) {
+      console.error('Error loading chapter:', error);
+    } finally {
+      setIsLoadingChapter(false);
+    }
+  };
+
+  const nextChapter = () => {
+    const novel = novels.find(n => n.id === currentNovelId);
+    if (novel && novel.info && currentChapter < novel.info.general_allcount) {
+      loadChapter(currentNovelId, currentChapter + 1);
+    }
+  };
+
+  const prevChapter = () => {
+    if (currentChapter > 1) {
+      loadChapter(currentNovelId, currentChapter - 1);
+    }
+  };
+
 
   const closeReader = () => {
     setViewMode('library');
@@ -537,7 +587,9 @@ export default function Tsunovel() {
           <div className={getReaderStyles()}>
             <div className="max-w-2xl mx-auto pt-20 pb-20">
               <div className="mb-12 text-center border-b border-current/10 pb-8">
-                <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">Web Novel</span>
+                <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
+                  {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
+                </span>
                 <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
                   {novels.find(n => n.id === currentNovelId)?.title}
                 </h1>
@@ -545,9 +597,43 @@ export default function Tsunovel() {
                   著者: {novels.find(n => n.id === currentNovelId)?.author}
                 </p>
               </div>
-              <div className="whitespace-pre-wrap text-justify leading-[2.0]">
-                {novels.find(n => n.id === currentNovelId)?.content}
-              </div>
+
+              {isLoadingChapter ? (
+                <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
+                  <Loader className="animate-spin" />
+                  <p>読み込み中...</p>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap text-justify leading-[2.0]">
+                  {novels.find(n => n.id === currentNovelId)?.content}
+                </div>
+              )}
+
+              {/* Navigation */}
+              {!isLoadingChapter && novels.find(n => n.id === currentNovelId)?.info?.noveltype !== 2 && (
+                <div className="mt-20 pt-10 border-t border-current/10 flex items-center justify-between">
+                  <button
+                    onClick={prevChapter}
+                    disabled={currentChapter <= 1}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
+                  >
+                    <ArrowLeft size={18} />
+                    前の話
+                  </button>
+                  <span className="text-sm opacity-50 font-bold">
+                    {currentChapter} / {novels.find(n => n.id === currentNovelId)?.info?.general_allcount || '?'}
+                  </span>
+                  <button
+                    onClick={nextChapter}
+                    disabled={currentChapter >= (novels.find(n => n.id === currentNovelId)?.info?.general_allcount || 0)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
+                  >
+                    次の話
+                    <ArrowLeft size={18} className="rotate-180" />
+                  </button>
+                </div>
+              )}
+
               <div className="mt-20 flex justify-center opacity-50">
                 <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
                 <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
