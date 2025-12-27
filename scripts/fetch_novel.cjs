@@ -1,7 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const zlib = require('zlib');
 
+/**
+ * なろう小説取得スクリプト v2
+ * - APIでメタデータを取得
+ * - HTMLスクレイピングで本文を取得 (gzip対応, Browser-like UA)
+ */
 async function fetchNovel() {
     const ncode = process.env.NCODE;
     if (!ncode) {
@@ -9,89 +15,65 @@ async function fetchNovel() {
         process.exit(1);
     }
 
-    const url = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}`;
-    const userAgent = 'TsunovelBot/1.0 (GitHub Actions)';
+    // ブラウザに近いUser-Agentに設定
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-    console.log(`Fetching novel data for ncode: ${ncode}`);
-    console.log(`URL: ${url}`);
+    console.log(`--- Start Fetching: ${ncode} ---`);
 
     try {
-        const response = await new Promise((resolve, reject) => {
-            https.get(url, { headers: { 'User-Agent': userAgent } }, (res) => {
-                let data = '';
-                res.on('data', (chunk) => data += chunk);
-                res.on('end', () => resolve(data));
-            }).on('error', reject);
-        });
-
-        console.log('API Response received (first 100 chars):', response.substring(0, 100));
+        // 1. メタデータの取得 (なろうAPI)
+        const apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}`;
+        console.log('Fetching metadata from API...');
+        const apiResponse = await httpRequest(apiUrl, { 'User-Agent': userAgent });
 
         let jsonData;
         try {
-            jsonData = JSON.parse(response);
+            jsonData = JSON.parse(apiResponse);
         } catch (e) {
-            console.error('Failed to parse JSON response. Response was:', response);
-            throw new Error(`JSON parse error: ${e.message}`);
+            console.error('API Response Parse Error. Raw:', apiResponse.substring(0, 200));
+            throw e;
         }
 
         if (!jsonData || jsonData.length < 2) {
-            console.error('API Response Structure:', jsonData);
-            throw new Error('Novel data not found in response (array length < 2).');
+            throw new Error('Novel not found in Narou API.');
         }
 
-        // 最初の要素は {allcount: n} なので、2番目の要素を取得
         const novelInfo = jsonData[1];
-
         const dirPath = path.join('docs', ncode);
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true });
         }
-        const filePath = path.join(dirPath, 'info.json');
-        fs.writeFileSync(filePath, JSON.stringify(novelInfo, null, 2));
-        console.log(`Successfully saved novel data to ${filePath}`);
 
-        // 本文（全話）の取得
+        fs.writeFileSync(path.join(dirPath, 'info.json'), JSON.stringify(novelInfo, null, 2));
+        console.log(`Saved metadata to ${dirPath}/info.json`);
+
+        // 2. 本文の取得 (スクレイピング)
         const chaptersPath = path.join(dirPath, 'chapters');
-        if (!fs.existsSync(chaptersPath)) {
-            fs.mkdirSync(chaptersPath, { recursive: true });
-        }
+        if (!fs.existsSync(chaptersPath)) fs.mkdirSync(chaptersPath, { recursive: true });
 
         const totalChapters = novelInfo.noveltype === 2 ? 1 : (novelInfo.general_allcount || 1);
-        console.log(`Starting to fetch ${totalChapters} chapters...`);
+        console.log(`Total episodes target: ${totalChapters}`);
 
         for (let i = 1; i <= totalChapters; i++) {
+            const contentUrl = novelInfo.noveltype === 2
+                ? `https://ncode.syosetu.com/${ncode}/`
+                : `https://ncode.syosetu.com/${ncode}/${i}/`;
+
+            console.log(`[${i}/${totalChapters}] Fetching: ${contentUrl}`);
+
             try {
-                const contentUrl = novelInfo.noveltype === 2
-                    ? `https://ncode.syosetu.com/${ncode}/`
-                    : `https://ncode.syosetu.com/${ncode}/${i}/`;
-
-                console.log(`[${i}/${totalChapters}] Fetching chapter: ${contentUrl}`);
-
-                const html = await new Promise((resolve, reject) => {
-                    const options = {
-                        headers: {
-                            'User-Agent': userAgent,
-                            'Cookie': 'over18=yes' // 年齢制限回避用
-                        }
-                    };
-                    const req = https.get(contentUrl, options, (res) => {
-                        let data = '';
-                        res.on('data', (chunk) => data += chunk);
-                        res.on('end', () => resolve(data));
-                    });
-                    req.on('error', reject);
-                    req.setTimeout(15000, () => {
-                        req.destroy();
-                        reject(new Error('Request timeout'));
-                    });
+                const html = await httpRequest(contentUrl, {
+                    'User-Agent': userAgent,
+                    'Cookie': 'over18=yes',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate'
                 });
 
-                console.log(`[${i}/${totalChapters}] HTML length: ${html.length}`);
+                // 本文抽出
+                const honbunMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i);
 
-                // IDだけでマッチング（クラス名が変わっても対応可能にする）
-                const honbunMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/);
                 if (honbunMatch && honbunMatch[1]) {
-                    console.log(`[${i}/${totalChapters}] Content found! length: ${honbunMatch[1].length}`);
                     let content = honbunMatch[1]
                         .replace(/<p id="L\d+">/g, '')
                         .replace(/<\/p>/g, '\n')
@@ -101,60 +83,99 @@ async function fetchNovel() {
                         .replace(/&amp;/g, '&')
                         .replace(/&quot;/g, '"')
                         .replace(/&#39;/g, "'")
-                        .replace(/<[^>]*>/g, '') // 残ったタグを確実に除去
+                        .replace(/<[^>]*>/g, '') // 残ったタグを除去
                         .trim();
 
-                    const chapterFile = path.join(chaptersPath, `${i}.txt`);
-                    fs.writeFileSync(chapterFile, content);
-
-                    if (i === 1) {
-                        fs.writeFileSync(path.join(dirPath, 'content.txt'), content);
-                    }
+                    fs.writeFileSync(path.join(chaptersPath, `${i}.txt`), content);
+                    if (i === 1) fs.writeFileSync(path.join(dirPath, 'content.txt'), content);
+                    console.log(`[${i}/${totalChapters}] SUCCESS. (${content.length} chars)`);
                 } else {
-                    console.log(`[${i}/${totalChapters}] Content NOT found.`);
-                    if (html.includes('id="novelheader"')) {
-                        console.log('Page loaded but #novel_honbun missing. Possibly structure changed.');
-                    } else if (html.includes('霞草')) {
-                        console.log('Redirected to Age Verification or Error page.');
-                    }
-                    console.log('HTML Snippet:', html.substring(0, 500));
-                }
-
-                if (totalChapters > 1) {
-                    await new Promise(r => setTimeout(r, 1000)); // 負荷軽減のため1秒待機
+                    console.error(`[${i}/${totalChapters}] FAILED to find content marker (#novel_honbun).`);
+                    // デバッグ用にHTMLの一部を表示
+                    console.log('HTML Snippet (first 500 chars):', html.substring(0, 500));
+                    if (html.includes('霞草')) console.log('Detected: Anti-Bot or Age Verification Page.');
                 }
             } catch (err) {
-                console.error(`Failed to fetch chapter ${i}:`, err.message);
-                if (i === 1) throw err;
+                console.error(`[${i}/${totalChapters}] HTTP Error:`, err.message);
+                if (i === 1) throw err; // 1話目がダメなら終了
             }
+
+            // 負荷軽減
+            if (totalChapters > 1) await new Promise(r => setTimeout(r, 1000));
         }
 
-        // docs/index.json を更新（一覧用）
-        const indexPath = path.join('docs', 'index.json');
-        let indexData = [];
-        if (fs.existsSync(indexPath)) {
-            try {
-                indexData = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
-            } catch (e) {
-                indexData = [];
-            }
-        }
+        // 3. インデックスの更新
+        updateIndex(novelInfo);
+        console.log('--- All Process Completed ---');
 
-        // 既存のncodeがあれば削除して新しいデータを追加
-        indexData = indexData.filter(item => item.ncode !== novelInfo.ncode);
-        indexData.unshift({
-            ncode: novelInfo.ncode,
-            title: novelInfo.title,
-            writer: novelInfo.writer,
-            added_at: new Date().toISOString()
-        });
-
-        fs.writeFileSync(indexPath, JSON.stringify(indexData, null, 2));
-        console.log(`Updated index file at ${indexPath}`);
     } catch (error) {
-        console.error('Error fetching novel data:', error.message);
+        console.error('--- Fatal Error ---');
+        console.error(error.message);
         process.exit(1);
     }
+}
+
+/**
+ * リクエスト関数
+ */
+function httpRequest(url, headers) {
+    return new Promise((resolve, reject) => {
+        https.get(url, { headers }, (res) => {
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                // リダイレクト対応
+                console.log(`Following redirect to: ${res.headers.location}`);
+                return httpRequest(res.headers.location, headers).then(resolve).catch(reject);
+            }
+
+            let chunks = [];
+            res.on('data', (chunk) => chunks.push(chunk));
+            res.on('end', () => {
+                let buffer = Buffer.concat(chunks);
+                const encoding = res.headers['content-encoding'];
+
+                if (encoding === 'gzip') {
+                    zlib.gunzip(buffer, (err, decoded) => {
+                        if (err) reject(err);
+                        else resolve(decoded.toString());
+                    });
+                } else if (encoding === 'deflate') {
+                    zlib.inflate(buffer, (err, decoded) => {
+                        if (err) reject(err);
+                        else resolve(decoded.toString());
+                    });
+                } else {
+                    resolve(buffer.toString());
+                }
+            });
+        }).on('error', reject).setTimeout(20000, function () {
+            this.destroy();
+            reject(new Error('HTTP Timeout (20s)'));
+        });
+    });
+}
+
+/**
+ * インデックスファイルの更新
+ */
+function updateIndex(novelInfo) {
+    const indexPath = path.join('docs', 'index.json');
+    let indexData = [];
+    if (fs.existsSync(indexPath)) {
+        try {
+            indexData = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+        } catch (e) { }
+    }
+
+    indexData = indexData.filter(item => item.ncode !== novelInfo.ncode);
+    indexData.unshift({
+        ncode: novelInfo.ncode,
+        title: novelInfo.title,
+        writer: novelInfo.writer,
+        added_at: new Date().toISOString(),
+        total_episodes: novelInfo.general_allcount
+    });
+
+    fs.writeFileSync(indexPath, JSON.stringify(indexData.slice(0, 100), null, 2));
 }
 
 fetchNovel();
