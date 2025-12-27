@@ -103,9 +103,9 @@ export default function Tsunovel() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState('');
   const [githubConfig, setGithubConfig] = useState({
-    owner: 'sora0', // デフォルト値を設定
+    owner: 'soramk', // デフォルト値を修正
     repo: 'tsunovel',
-    pat: '', // ユーザーが設定できるようにする
+    pat: '',
   });
 
   const [readerSettings, setReaderSettings] = useState({
@@ -600,8 +600,8 @@ export default function Tsunovel() {
                   setSearchResults([]);
                 }}
                 className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${addMode === 'search'
-                    ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-gray-600 hover:text-gray-800'
+                  ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-600 hover:text-gray-800'
                   }`}
               >
                 <Search size={16} className="inline mr-2" />
@@ -614,8 +614,8 @@ export default function Tsunovel() {
                   setSearchResults([]);
                 }}
                 className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${addMode === 'url'
-                    ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-gray-600 hover:text-gray-800'
+                  ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-gray-600 hover:text-gray-800'
                   }`}
               >
                 <Link size={16} className="inline mr-2" />
@@ -689,29 +689,51 @@ export default function Tsunovel() {
                     <p className="text-xs text-gray-500 mt-2">
                       対応サイト: 小説家になろう (GitHub Actionsプロキシ経由)
                     </p>
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">GitHub PAT (個人アクセストークン)</label>
-                      <input
-                        type="password"
-                        placeholder="ghp_..."
-                        className="w-full px-3 py-2 text-xs rounded border border-gray-200 focus:border-indigo-500 outline-none"
-                        value={githubConfig.pat}
-                        onChange={(e) => setGithubConfig({ ...githubConfig, pat: e.target.value })}
-                      />
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">GitHub Repository (Owner/Repo)</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="owner"
+                            className="w-1/2 px-2 py-1 text-xs rounded border border-gray-200 focus:border-indigo-500 outline-none"
+                            value={githubConfig.owner}
+                            onChange={(e) => setGithubConfig({ ...githubConfig, owner: e.target.value })}
+                          />
+                          <span className="text-gray-400">/</span>
+                          <input
+                            type="text"
+                            placeholder="repo"
+                            className="w-1/2 px-2 py-1 text-xs rounded border border-gray-200 focus:border-indigo-500 outline-none"
+                            value={githubConfig.repo}
+                            onChange={(e) => setGithubConfig({ ...githubConfig, repo: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">GitHub PAT (個人アクセストークン)</label>
+                        <input
+                          type="password"
+                          placeholder="ghp_..."
+                          className="w-full px-3 py-2 text-xs rounded border border-gray-200 focus:border-indigo-500 outline-none"
+                          value={githubConfig.pat}
+                          onChange={(e) => setGithubConfig({ ...githubConfig, pat: e.target.value })}
+                        />
+                      </div>
                       <p className="text-[10px] text-gray-400 mt-1">
-                        ※ `repo` 権限が必要です。トークンはブラウザのメモリ上のみに保持されます。
+                        ※ `repo` 権限が必要です。変更をGitHubにPushした状態で実行してください。
                       </p>
                     </div>
                   </div>
 
                   {downloadProgress && (
                     <div className={`mb-4 p-3 rounded-lg border ${downloadProgress.startsWith('エラー:')
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-blue-50 border-blue-200'
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-blue-50 border-blue-200'
                       }`}>
                       <div className={`flex items-center gap-2 text-sm ${downloadProgress.startsWith('エラー:')
-                          ? 'text-red-700'
-                          : 'text-blue-700'
+                        ? 'text-red-700'
+                        : 'text-blue-700'
                         }`}>
                         {isDownloading && !downloadProgress.startsWith('エラー:') && (
                           <Loader size={16} className="animate-spin" />
