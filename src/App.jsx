@@ -380,10 +380,10 @@ export default function Tsunovel() {
     }
 
     switch (readerSettings.fontFamily) {
-      case 'serif': fontClass = "font-serif"; break;
+      case 'serif': fontClass = "serif"; break;
       case 'noto-serif': fontClass = "'Noto Serif JP', serif"; break;
       case 'noto-sans': fontClass = "'Noto Sans JP', sans-serif"; break;
-      default: fontClass = "font-sans"; break;
+      default: fontClass = "sans-serif"; break;
     }
 
     return {
@@ -405,10 +405,12 @@ export default function Tsunovel() {
 
     const handleScroll = () => {
       const scrollHeight = document.documentElement.scrollHeight;
-      const scrollTop = document.documentElement.scrollTop;
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
       const clientHeight = document.documentElement.clientHeight;
 
-      if (scrollTop + clientHeight >= scrollHeight - 20) {
+      // 短いページの場合または最下部に到達した場合
+      // scrollTop > 0 を条件に加えることで、初期表示時の誤爆を防ぐ
+      if (scrollTop > 0 && scrollTop + clientHeight >= scrollHeight - 30) {
         if (!isLoadingChapter && currentNovel && currentChapter < currentNovel.info?.general_all_no) {
           nextChapter();
         }
@@ -813,7 +815,7 @@ export default function Tsunovel() {
 
           {/* Reader Content */}
           <div className={getReaderStyles().className} style={getReaderStyles().style}>
-            <div className="max-w-2xl mx-auto pt-20 pb-20">
+            <div className="max-w-2xl mx-auto pt-20 pb-32">
               <div className="mb-12 text-center border-b border-current/10 pb-8">
                 <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
                   {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
@@ -832,7 +834,7 @@ export default function Tsunovel() {
                   <p>読み込み中...</p>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap text-justify leading-[2.0]">
+                <div className="whitespace-pre-wrap text-justify">
                   {novels.find(n => n.id === currentNovelId)?.content}
                 </div>
               )}
