@@ -77,34 +77,47 @@ export default function Tsunovel() {
   });
 
   const [currentChapter, setCurrentChapter] = useState(1);
-  const [isLoadingChapter, setIsLoadingChapter] = useState(false);
-
+  const [isLoadingIndex, setIsLoadingIndex] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const settingsRef = useRef(null);
 
   // 初期読み込み: storage/index.json から小説一覧を取得
   useEffect(() => {
     const loadIndex = async () => {
+      if (!githubConfig.owner || !githubConfig.repo) return;
+
+      setIsLoadingIndex(true);
+      setLoadError(null);
       console.log('Refreshing library index...');
-      const index = await fetchIndex(githubConfig);
-      if (index && index.length > 0) {
-        const loadedNovels = index.map(item => ({
-          id: item.ncode,
-          title: item.title,
-          author: item.writer,
-          site: '小説家になろう',
-          status: 'unread',
-          progress: 0,
-          ncode: item.ncode,
-          content: null // 後で取得
-        }));
-        setNovels(loadedNovels);
-      } else {
-        console.log('No novels found or fetch failed.');
-        setNovels([]); // 失敗時はクリア
+
+      try {
+        const index = await fetchIndex(githubConfig);
+        if (index && Array.isArray(index) && index.length > 0) {
+          const loadedNovels = index.map(item => ({
+            id: item.ncode,
+            title: item.title,
+            author: item.writer,
+            site: '小説家になろう',
+            status: 'unread',
+            progress: 0,
+            ncode: item.ncode,
+            content: null
+          }));
+          setNovels(loadedNovels);
+        } else if (index && Array.isArray(index)) {
+          setNovels([]); // 空配列の場合は正常終了として扱う
+        } else {
+          // エラーや無効なデータの場合（fetchIndex内でエラーログ出力済み）
+          setLoadError('データの取得に失敗したか、ファイルがありません');
+        }
+      } catch (err) {
+        setLoadError('接続エラーが発生しました');
+      } finally {
+        setIsLoadingIndex(false);
       }
     };
     loadIndex();
-  }, [githubConfig.owner, githubConfig.repo, githubConfig.pat]); // PATの変更も検知
+  }, [githubConfig.owner, githubConfig.repo, githubConfig.pat]);
 
   // 設定パネルの外側クリックで閉じる
   useEffect(() => {
@@ -369,128 +382,158 @@ export default function Tsunovel() {
             </div>
 
             {/* Bookshelf Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-8 gap-y-20 px-4 pb-20">
-              {novels.map((novel, index) => {
-                const isOpening = openingBookId === novel.id;
-                // 画像URLを固定IDで生成
-                const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
+            <div className="min-h-[400px]">
+              {isLoadingIndex ? (
+                <div className="flex flex-col items-center justify-center py-20 text-[#d7ccc8] gap-4">
+                  <Loader className="animate-spin" size={48} />
+                  <p className="font-serif italic">Library loading...</p>
+                </div>
+              ) : loadError ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                  <div className="bg-red-900/40 border border-red-500/50 rounded-xl p-8 max-w-sm">
+                    <X size={48} className="mx-auto mb-4 text-red-400" />
+                    <h3 className="text-xl font-bold text-white mb-2 font-serif">Oops!</h3>
+                    <p className="text-red-200 text-sm mb-6">{loadError}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-full text-sm font-bold transition-colors shadow-lg"
+                    >
+                      Retry
+                    </button>
+                    <p className="mt-4 text-[10px] text-red-300 opacity-60">※PATの設定やリポジトリ名を確認してください</p>
+                  </div>
+                </div>
+              ) : novels.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-[#d7ccc8] opacity-50 text-center px-4">
+                  <Book size={48} className="mb-4" />
+                  <p className="font-serif italic mb-2">Shelf is empty.</p>
+                  <p className="text-xs">「小説を追加」から作品をダウンロードしてください</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-8 gap-y-20 px-4 pb-20">
+                  {novels.map((novel, index) => {
+                    const isOpening = openingBookId === novel.id;
+                    // 画像URLを固定IDで生成
+                    const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
 
-                return (
-                  <div
-                    key={novel.id}
-                    className={`relative group perspective-1000 ${isOpening ? 'z-50' : 'z-0'}`}
-                  >
+                    return (
+                      <div
+                        key={novel.id}
+                        className={`relative group perspective-1000 ${isOpening ? 'z-50' : 'z-0'}`}
+                      >
 
-                    {/* --- 3D BOOK STRUCTURE --- */}
-                    <div
-                      onClick={() => handleBookClick(novel.id)}
-                      className={`
+                        {/* --- 3D BOOK STRUCTURE --- */}
+                        <div
+                          onClick={() => handleBookClick(novel.id)}
+                          className={`
                         relative w-full aspect-[2/3] cursor-pointer preserve-3d ease-in-out
                         ${isOpening ? 'duration-[800ms]' : 'duration-300'}
                         ${isOpening
-                          ? 'translate-z-[200px] -translate-y-[50px] scale-110 rotate-y-[-10deg]'
-                          : 'group-hover:translate-z-[30px] group-hover:-translate-y-[10px] group-hover:rotate-y-[-5deg]'
-                        }
+                              ? 'translate-z-[200px] -translate-y-[50px] scale-110 rotate-y-[-10deg]'
+                              : 'group-hover:translate-z-[30px] group-hover:-translate-y-[10px] group-hover:rotate-y-[-5deg]'
+                            }
                       `}
-                      style={{ transformStyle: 'preserve-3d' }}
-                    >
-                      {/* 1. FRONT COVER (表紙) */}
-                      <div
-                        className={`
+                          style={{ transformStyle: 'preserve-3d' }}
+                        >
+                          {/* 1. FRONT COVER (表紙) */}
+                          <div
+                            className={`
                           absolute inset-0 rounded-r-sm rounded-l-sm shadow-2xl origin-left backface-hidden z-20
                           transition-transform ease-in-out border border-white/10
                           ${isOpening ? 'duration-[800ms] delay-[400ms] rotate-y-[-140deg]' : 'duration-300'}
                         `}
-                        style={{
-                          backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.1)), url(${coverImage})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          backgroundColor: '#3e2e28'
-                        }}
-                      >
-                        {/* 質感と影 */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/20 mix-blend-multiply rounded-sm"></div>
-                        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-white/20"></div>
+                            style={{
+                              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.1)), url(${coverImage})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              backgroundColor: '#3e2e28'
+                            }}
+                          >
+                            {/* 質感と影 */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/20 mix-blend-multiply rounded-sm"></div>
+                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-white/20"></div>
 
-                        {/* タイトルデザイン */}
-                        <div className="relative h-full p-4 flex flex-col justify-between z-30">
-                          <div className="border border-[#e0d0c0]/30 p-1 h-full flex flex-col backdrop-blur-[0.5px]">
-                            <div className="border border-[#e0d0c0]/20 flex-1 p-2 flex flex-col bg-black/10">
-                              <span className="text-[10px] tracking-widest text-[#e0d0c0]/80 uppercase mb-2 border-b border-[#e0d0c0]/20 pb-1 self-start">{novel.site}</span>
-                              <h3 className="font-serif font-bold text-white text-lg leading-snug drop-shadow-md line-clamp-4 filter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                                {novel.title}
-                              </h3>
-                              <p className="mt-auto text-xs text-[#e0d0c0] font-medium text-right drop-shadow-sm">
-                                {novel.author}
-                              </p>
+                            {/* タイトルデザイン */}
+                            <div className="relative h-full p-4 flex flex-col justify-between z-30">
+                              <div className="border border-[#e0d0c0]/30 p-1 h-full flex flex-col backdrop-blur-[0.5px]">
+                                <div className="border border-[#e0d0c0]/20 flex-1 p-2 flex flex-col bg-black/10">
+                                  <span className="text-[10px] tracking-widest text-[#e0d0c0]/80 uppercase mb-2 border-b border-[#e0d0c0]/20 pb-1 self-start">{novel.site}</span>
+                                  <h3 className="font-serif font-bold text-white text-lg leading-snug drop-shadow-md line-clamp-4 filter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                                    {novel.title}
+                                  </h3>
+                                  <p className="mt-auto text-xs text-[#e0d0c0] font-medium text-right drop-shadow-sm">
+                                    {novel.author}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
 
-                        {/* ステータスリボン */}
-                        {novel.status === 'reading' && (
-                          <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-red-700 to-red-600 shadow-md flex items-end justify-center pb-1 z-40">
-                            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
+                            {/* ステータスリボン */}
+                            {novel.status === 'reading' && (
+                              <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-red-700 to-red-600 shadow-md flex items-end justify-center pb-1 z-40">
+                                <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
+                              </div>
+                            )}
+                            {novel.status === 'completed' && (
+                              <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-green-700 to-green-600 shadow-md flex items-end justify-center pb-1 z-40">
+                                <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {novel.status === 'completed' && (
-                          <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-green-700 to-green-600 shadow-md flex items-end justify-center pb-1 z-40">
-                            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
+
+                          {/* 2. PAGE BLOCK (中身・厚み) */}
+                          <div className="absolute inset-y-[1%] right-[1%] w-[98%] bg-[#fdfbf7] rounded-l-sm -translate-z-[4px] z-10">
+                            <div
+                              className="h-full w-full rounded-r-sm border-r border-gray-300 shadow-inner"
+                              style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e0e0e0, #e0e0e0 1px, #fff 1px, #fff 3px)' }}
+                            ></div>
                           </div>
-                        )}
-                      </div>
 
-                      {/* 2. PAGE BLOCK (中身・厚み) */}
-                      <div className="absolute inset-y-[1%] right-[1%] w-[98%] bg-[#fdfbf7] rounded-l-sm -translate-z-[4px] z-10">
-                        <div
-                          className="h-full w-full rounded-r-sm border-r border-gray-300 shadow-inner"
-                          style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e0e0e0, #e0e0e0 1px, #fff 1px, #fff 3px)' }}
-                        ></div>
-                      </div>
-
-                      {/* 3. INSIDE COVER (表紙の裏) */}
-                      <div
-                        className={`
+                          {/* 3. INSIDE COVER (表紙の裏) */}
+                          <div
+                            className={`
                            absolute inset-0 bg-[#fffefc] rounded-r-sm rounded-l-sm origin-left backface-hidden z-10 flex items-center justify-center p-4
                            transition-transform ease-in-out border-l border-gray-200
                            ${isOpening ? 'duration-[800ms] delay-[400ms] rotate-y-[-140deg]' : 'duration-300'}
                         `}
-                        style={{ transform: `rotateY(180deg)` }}
-                      >
-                        <div className="text-center opacity-70 w-full">
-                          <div className="border-4 border-double border-gray-300 p-4 m-2">
-                            <p className="font-serif text-gray-800 text-sm italic mb-2 line-clamp-2">{novel.title}</p>
-                            <div className="w-full h-[1px] bg-gray-300 mx-auto my-2"></div>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Tsunovel Library</p>
+                            style={{ transform: `rotateY(180deg)` }}
+                          >
+                            <div className="text-center opacity-70 w-full">
+                              <div className="border-4 border-double border-gray-300 p-4 m-2">
+                                <p className="font-serif text-gray-800 text-sm italic mb-2 line-clamp-2">{novel.title}</p>
+                                <div className="w-full h-[1px] bg-gray-300 mx-auto my-2"></div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Tsunovel Library</p>
+                              </div>
+                            </div>
                           </div>
+
+                          {/* 4. BACK COVER (裏表紙) */}
+                          <div className="absolute inset-0 bg-[#3e2e28] rounded-sm -translate-z-[14px] shadow-2xl border border-white/5"></div>
+
+                          {/* 5. SPINE (背表紙) */}
+                          <div className="absolute left-0 top-0 bottom-0 w-[14px] bg-[#2d211b] origin-left rotate-y-[-90deg] flex items-center justify-center overflow-hidden border-l border-white/10">
+                            <span className="text-[8px] text-gray-400 rotate-90 whitespace-nowrap opacity-50 tracking-widest">{novel.author}</span>
+                          </div>
+
                         </div>
-                      </div>
 
-                      {/* 4. BACK COVER (裏表紙) */}
-                      <div className="absolute inset-0 bg-[#3e2e28] rounded-sm -translate-z-[14px] shadow-2xl border border-white/5"></div>
-
-                      {/* 5. SPINE (背表紙) */}
-                      <div className="absolute left-0 top-0 bottom-0 w-[14px] bg-[#2d211b] origin-left rotate-y-[-90deg] flex items-center justify-center overflow-hidden border-l border-white/10">
-                        <span className="text-[8px] text-gray-400 rotate-90 whitespace-nowrap opacity-50 tracking-widest">{novel.author}</span>
-                      </div>
-
-                    </div>
-
-                    {/* 床の影 */}
-                    <div className={`
+                        {/* 床の影 */}
+                        <div className={`
                       absolute -bottom-8 left-2 right-2 h-4 bg-black/50 blur-lg rounded-[100%] 
                       transition-all ease-in-out
                       ${isOpening ? 'duration-[800ms] scale-75 opacity-30 translate-y-8' : 'duration-300 group-hover:scale-90 group-hover:opacity-60'}
                     `}></div>
 
-                    {/* --- SHELF BOARD (棚板) --- */}
-                    <div className="absolute -bottom-10 -left-6 -right-6 h-6 bg-[#3e2723] rounded-sm shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-[-1]">
-                      <div className="absolute top-0 left-0 right-0 h-2 bg-[#4e342e]"></div>
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30"></div>
-                    </div>
-                  </div>
-                );
-              })}
+                        {/* --- SHELF BOARD (棚板) --- */}
+                        <div className="absolute -bottom-10 -left-6 -right-6 h-6 bg-[#3e2723] rounded-sm shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-[-1]">
+                          <div className="absolute top-0 left-0 right-0 h-2 bg-[#4e342e]"></div>
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30"></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </main>
         </>

@@ -105,17 +105,17 @@ export async function fetchIndex(config) {
                 return JSON.parse(text);
             } catch (e) {
                 console.error('Failed to parse index JSON:', e);
-                return [];
+                return []; // JSONパース失敗時は空配列（形式エラーとして扱う）
             }
         } else {
             console.error(`Fetch Index Error: ${response.status} ${response.statusText}`);
             if (response.status === 401) console.error('Check if your PAT is valid.');
             if (response.status === 404) console.error('storage/index.json not found in the repository.');
-            return [];
+            return null; // HTTPエラー時は null を返す
         }
     } catch (error) {
         console.error('Network Error fetching index:', error);
-        return [];
+        return null; // ネットワークエラーも null
     }
 }
 
