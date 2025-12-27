@@ -17,7 +17,6 @@ import {
   Loader,
   ChevronRight,
   ChevronLeft,
-  ArrowLeft,
   ArrowRight,
   Menu,
   Bookmark,
