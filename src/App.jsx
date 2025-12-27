@@ -56,11 +56,19 @@ export default function Tsunovel() {
   const [urlInput, setUrlInput] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState('');
-  const [githubConfig, setGithubConfig] = useState({
-    owner: 'soramk', // デフォルト値を修正
-    repo: 'tsunovel',
-    pat: '',
+  const [githubConfig, setGithubConfig] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_github_config');
+    return saved ? JSON.parse(saved) : {
+      owner: 'soramk',
+      repo: 'tsunovel',
+      pat: '',
+    };
   });
+
+  // 設定が変更されたら localStorage に保存
+  useEffect(() => {
+    localStorage.setItem('tsunovel_github_config', JSON.stringify(githubConfig));
+  }, [githubConfig]);
 
   const [readerSettings, setReaderSettings] = useState({
     theme: 'sepia',
@@ -174,7 +182,14 @@ export default function Tsunovel() {
 
       if (!infoData) {
         const infoRes = await fetch(infoUrl, fetchOptions);
-        if (infoRes.ok) infoData = await infoRes.json();
+        if (infoRes.ok) {
+          const infoText = await infoRes.text();
+          try {
+            infoData = JSON.parse(infoText);
+          } catch (e) {
+            console.error('Failed to parse info JSON:', e);
+          }
+        }
       }
 
       setNovels(prev => prev.map(n =>

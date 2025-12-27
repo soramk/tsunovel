@@ -53,9 +53,14 @@ export async function pollData(ncode, config) {
                 const response = await fetch(url, fetchOptions);
 
                 if (response.ok) {
-                    const data = await response.json();
-                    resolve(data);
-                    return;
+                    const text = await response.text();
+                    try {
+                        const data = JSON.parse(text);
+                        resolve(data);
+                        return;
+                    } catch (e) {
+                        console.error('Failed to parse polled JSON:', e);
+                    }
                 }
 
                 if (response.status === 404) {
@@ -95,7 +100,13 @@ export async function fetchIndex(config) {
     try {
         const response = await fetch(url, fetchOptions);
         if (response.ok) {
-            return await response.json();
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Failed to parse index JSON:', e);
+                return [];
+            }
         }
         return [];
     } catch (error) {
