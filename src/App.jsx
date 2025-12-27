@@ -73,7 +73,7 @@ export default function Tsunovel() {
 
   const settingsRef = useRef(null);
 
-  // 初期読み込み: docs/index.json から小説一覧を取得
+  // 初期読み込み: storage/index.json から小説一覧を取得
   useEffect(() => {
     const loadIndex = async () => {
       const index = await fetchIndex(githubConfig);
@@ -92,7 +92,7 @@ export default function Tsunovel() {
       }
     };
     loadIndex();
-  }, []);
+  }, [githubConfig.owner, githubConfig.repo]); // owner/repoが変更されたら再取得
 
   // 設定パネルの外側クリックで閉じる
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function Tsunovel() {
 
   const nextChapter = () => {
     const novel = novels.find(n => n.id === currentNovelId);
-    if (novel && novel.info && currentChapter < novel.info.general_allcount) {
+    if (novel && novel.info && currentChapter < novel.info.general_all_no) {
       loadChapter(currentNovelId, currentChapter + 1);
     }
   };
@@ -621,11 +621,11 @@ export default function Tsunovel() {
                     前の話
                   </button>
                   <span className="text-sm opacity-50 font-bold">
-                    {currentChapter} / {novels.find(n => n.id === currentNovelId)?.info?.general_allcount || '?'}
+                    {currentChapter} / {novels.find(n => n.id === currentNovelId)?.info?.general_all_no || '?'}
                   </span>
                   <button
                     onClick={nextChapter}
-                    disabled={currentChapter >= (novels.find(n => n.id === currentNovelId)?.info?.general_allcount || 0)}
+                    disabled={currentChapter >= (novels.find(n => n.id === currentNovelId)?.info?.general_all_no || 0)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
                   >
                     次の話

@@ -51,11 +51,12 @@ async function fetchNovel() {
         const chaptersPath = path.join(dirPath, 'chapters');
         if (!fs.existsSync(chaptersPath)) fs.mkdirSync(chaptersPath, { recursive: true });
 
-        const totalChapters = novelInfo.noveltype === 2 ? 1 : (novelInfo.general_allcount || 1);
+        // なろうAPIのフィールド名修正: novel_type, general_all_no
+        const totalChapters = novelInfo.novel_type === 2 ? 1 : (novelInfo.general_all_no || 1);
         console.log(`Total episodes target: ${totalChapters}`);
 
         for (let i = 1; i <= totalChapters; i++) {
-            const contentUrl = novelInfo.noveltype === 2
+            const contentUrl = novelInfo.novel_type === 2
                 ? `https://ncode.syosetu.com/${ncode}/`
                 : `https://ncode.syosetu.com/${ncode}/${i}/`;
 
@@ -184,7 +185,7 @@ function updateIndex(novelInfo) {
         title: novelInfo.title,
         writer: novelInfo.writer,
         added_at: new Date().toISOString(),
-        total_episodes: novelInfo.general_allcount
+        total_episodes: novelInfo.general_all_no
     });
 
     fs.writeFileSync(indexPath, JSON.stringify(indexData.slice(0, 100), null, 2));
