@@ -35,7 +35,7 @@ export async function triggerFetch(ncode, config) {
  */
 export async function pollData(ncode, config) {
     const { owner, repo } = config;
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/docs/${ncode}/info.json?t=${Date.now()}`;
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/storage/${ncode}/info.json?t=${Date.now()}`;
 
     const maxRetries = 24; // 24 * 5s = 120s (2 minutes)
     let retries = 0;
@@ -76,7 +76,7 @@ export async function pollData(ncode, config) {
  */
 export async function fetchIndex(config) {
     const { owner, repo } = config;
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/docs/index.json?t=${Date.now()}`;
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/storage/index.json?t=${Date.now()}`;
 
     try {
         const response = await fetch(url);

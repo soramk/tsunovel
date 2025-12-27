@@ -39,7 +39,7 @@ async function fetchNovel() {
         }
 
         const novelInfo = jsonData[1];
-        const dirPath = path.join('docs', ncode);
+        const dirPath = path.join('storage', ncode);
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true });
         }
@@ -70,11 +70,15 @@ async function fetchNovel() {
                     'Accept-Encoding': 'gzip, deflate'
                 });
 
-                // 本文抽出
+                // 本文抽出 (最小一致で直近の </div> までを取得)
                 const honbunMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i);
 
                 if (honbunMatch && honbunMatch[1]) {
-                    let content = honbunMatch[1]
+                    // もし内部にさらに </div> が含まれている場合（通常なろうの本文内にはないが念のため）、
+                    // 抽出された内容をさらにクリーンアップする
+                    let contentRaw = honbunMatch[1];
+
+                    let content = contentRaw
                         .replace(/<p id="L\d+">/g, '')
                         .replace(/<\/p>/g, '\n')
                         .replace(/<br\s*\/?>/g, '\n')
@@ -93,6 +97,10 @@ async function fetchNovel() {
                     console.error(`[${i}/${totalChapters}] FAILED to find content marker (#novel_honbun).`);
                     // デバッグ用にHTMLの一部を表示
                     console.log('HTML Snippet (first 500 chars):', html.substring(0, 500));
+                    // HTML全体に #novel_honbun が含まれているかチェック
+                    if (html.toLowerCase().includes('id="novel_honbun"')) {
+                        console.log('Marker "novel_honbun" exists in HTML but Regex failed. Structure might be unusual.');
+                    }
                     if (html.includes('霞草')) console.log('Detected: Anti-Bot or Age Verification Page.');
                 }
             } catch (err) {
@@ -158,7 +166,7 @@ function httpRequest(url, headers) {
  * インデックスファイルの更新
  */
 function updateIndex(novelInfo) {
-    const indexPath = path.join('docs', 'index.json');
+    const indexPath = path.join('storage', 'index.json');
     let indexData = [];
     if (fs.existsSync(indexPath)) {
         try {

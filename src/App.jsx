@@ -148,8 +148,8 @@ export default function Tsunovel() {
     setIsLoadingChapter(true);
     try {
       // 1. chapters/{n}.txt の取得を試みる
-      const chapterUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/chapters/${chapterNum}.txt?t=${Date.now()}`;
-      const infoUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/info.json?t=${Date.now()}`;
+      const chapterUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/chapters/${chapterNum}.txt?t=${Date.now()}`;
+      const infoUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/info.json?t=${Date.now()}`;
 
       let novelContent = '';
       let infoData = novel.info || null;
@@ -159,7 +159,7 @@ export default function Tsunovel() {
         novelContent = await contentRes.text();
       } else if (chapterNum === 1) {
         // 互換性のため content.txt も試す
-        const legacyUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/content.txt?t=${Date.now()}`;
+        const legacyUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/content.txt?t=${Date.now()}`;
         const legacyRes = await fetch(legacyUrl);
         if (legacyRes.ok) novelContent = await legacyRes.text();
       }
