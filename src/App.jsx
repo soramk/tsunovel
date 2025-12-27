@@ -24,7 +24,7 @@ import {
   List,
   Home
 } from 'lucide-react';
-import { fetchNovelContent, extractNcode } from './utils/novelFetcher';
+import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, pollData, fetchIndex } from './utils/githubActions';
 
 /**
@@ -60,6 +60,7 @@ export default function Tsunovel() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [addMode, setAddMode] = useState('search'); // 'search' or 'url'
   const [urlInput, setUrlInput] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -354,32 +355,61 @@ export default function Tsunovel() {
     setIsSettingsOpen(false);
   };
 
-  const handleSearch = (query) => {
+  const handleSearch = async (query) => {
     setSearchQuery(query);
-    if (!query) {
+    if (!query || query.length < 2) {
       setSearchResults([]);
+      setIsSearching(false);
       return;
     }
-    const results = MOCK_SEARCH_DB.filter(item =>
-      item.title.includes(query) || item.author.includes(query) || item.keyword.includes(query.toLowerCase())
-    );
-    setSearchResults(results);
+
+    setIsSearching(true);
+    try {
+      const results = await searchNarou(query);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const addFromSearch = (item) => {
-    const newNovel = {
-      id: Date.now(),
-      title: item.title,
-      author: item.author,
-      site: item.site,
-      status: 'unread',
-      progress: 0,
-      content: `${item.title}\n\n（本文サンプル）\n\n${item.desc}\n\n　これは検索から追加された小説のサンプルコンテンツです。実際のアプリケーションでは、ここに実際の小説の本文が表示されます。`
-    };
-    setNovels([newNovel, ...novels]);
-    setIsAddModalOpen(false);
-    setSearchQuery('');
-    setSearchResults([]);
+  const addFromSearch = async (item) => {
+    setIsDownloading(true);
+    setDownloadProgress(`${item.title} の取得準備中...`);
+
+    try {
+      const ncode = item.ncode;
+      console.log('Adding from search:', item.title, ncode);
+
+      setDownloadProgress('GitHub Actionsを起動中...');
+      await triggerFetch(ncode, githubConfig);
+
+      setDownloadProgress('バックエンドで処理中... 完了まで最大1-2分かかります。');
+      const data = await pollData(ncode, githubConfig);
+
+      const newNovel = {
+        id: Date.now(),
+        title: data.title || item.title,
+        author: data.writer || data.author || item.author,
+        site: '小説家になろう',
+        status: 'unread',
+        progress: 0,
+        content: data.story ? `【あらすじ】\n\n${data.story}` : '本文を取得中...',
+        ncode: ncode
+      };
+
+      setNovels([newNovel, ...novels]);
+      setIsAddModalOpen(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      setDownloadProgress('');
+      setIsDownloading(false);
+    } catch (error) {
+      console.error('Error adding from search:', error);
+      setDownloadProgress(`エラー: ${error.message}`);
+      setTimeout(() => setIsDownloading(false), 5000);
+    }
   };
 
   const handleUrlDownload = async () => {
@@ -1312,13 +1342,18 @@ export default function Tsunovel() {
                     <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
                   </div>
 
-                  {searchQuery && searchResults.length === 0 && (
+                  {isSearching ? (
+                    <div className="flex flex-col items-center justify-center py-12 opacity-40">
+                      <Loader className="animate-spin mb-3" size={24} />
+                      <p className="text-sm italic font-serif">なろう内を検索中...</p>
+                    </div>
+                  ) : searchQuery && searchResults.length === 0 ? (
                     <div className="text-center text-gray-400 py-8">
                       検索結果が見つかりませんでした
                     </div>
-                  )}
+                  ) : null}
 
-                  {searchResults.length > 0 && (
+                  {!isSearching && searchResults.length > 0 && (
                     <div className="space-y-3">
                       {searchResults.map((item, idx) => (
                         <div
