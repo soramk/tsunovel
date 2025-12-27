@@ -68,7 +68,13 @@ async function fetchNovel() {
                 console.log(`[${i}/${totalChapters}] Fetching chapter: ${contentUrl}`);
 
                 const html = await new Promise((resolve, reject) => {
-                    const req = https.get(contentUrl, { headers: { 'User-Agent': userAgent } }, (res) => {
+                    const options = {
+                        headers: {
+                            'User-Agent': userAgent,
+                            'Cookie': 'over18=yes' // 年齢制限回避用
+                        }
+                    };
+                    const req = https.get(contentUrl, options, (res) => {
                         let data = '';
                         res.on('data', (chunk) => data += chunk);
                         res.on('end', () => resolve(data));
@@ -80,8 +86,12 @@ async function fetchNovel() {
                     });
                 });
 
-                const honbunMatch = html.match(/<div id="novel_honbun" class="novel_view">([\s\S]*?)<\/div>/);
+                console.log(`[${i}/${totalChapters}] HTML length: ${html.length}`);
+
+                // IDだけでマッチング（クラス名が変わっても対応可能にする）
+                const honbunMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/);
                 if (honbunMatch && honbunMatch[1]) {
+                    console.log(`[${i}/${totalChapters}] Content found! length: ${honbunMatch[1].length}`);
                     let content = honbunMatch[1]
                         .replace(/<p id="L\d+">/g, '')
                         .replace(/<\/p>/g, '\n')
@@ -91,7 +101,7 @@ async function fetchNovel() {
                         .replace(/&amp;/g, '&')
                         .replace(/&quot;/g, '"')
                         .replace(/&#39;/g, "'")
-                        .replace(/<[^>]*>/g, '') // 残ったタグを除去
+                        .replace(/<[^>]*>/g, '') // 残ったタグを確実に除去
                         .trim();
 
                     const chapterFile = path.join(chaptersPath, `${i}.txt`);
@@ -100,6 +110,14 @@ async function fetchNovel() {
                     if (i === 1) {
                         fs.writeFileSync(path.join(dirPath, 'content.txt'), content);
                     }
+                } else {
+                    console.log(`[${i}/${totalChapters}] Content NOT found.`);
+                    if (html.includes('id="novelheader"')) {
+                        console.log('Page loaded but #novel_honbun missing. Possibly structure changed.');
+                    } else if (html.includes('霞草')) {
+                        console.log('Redirected to Age Verification or Error page.');
+                    }
+                    console.log('HTML Snippet:', html.substring(0, 500));
                 }
 
                 if (totalChapters > 1) {
