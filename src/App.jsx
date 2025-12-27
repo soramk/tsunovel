@@ -105,7 +105,6 @@ export default function Tsunovel() {
     };
     loadIndex();
   }, [githubConfig.owner, githubConfig.repo, githubConfig.pat]); // PATの変更も検知
-  pieces
 
   // 設定パネルの外側クリックで閉じる
   useEffect(() => {
