@@ -94,6 +94,7 @@ export default function Tsunovel() {
       fontSize: 18,
       fontFamily: 'serif',
       lineHeight: 1.8,
+      textColor: '', // Empty means use theme default
       transitionMode: 'button', // 'button' or 'scroll'
     };
   });
@@ -376,6 +377,10 @@ export default function Tsunovel() {
       case 'midnight': themeClass = "bg-[#0f172a] text-[#94a3b8]"; break;
       case 'ivory': themeClass = "bg-[#fffff0] text-[#2d241e]"; break;
       case 'softgreen': themeClass = "bg-[#f0f9f0] text-[#2d4a2d]"; break;
+      case 'ocean': themeClass = "bg-[#e0f2f1] text-[#004d40]"; break;
+      case 'forest': themeClass = "bg-[#e8f5e9] text-[#1b5e20]"; break;
+      case 'paper': themeClass = "bg-[#fafafa] text-[#424242] border-x border-gray-200 shadow-inner"; break;
+      case 'coffee-deep': themeClass = "bg-[#3e2723] text-[#d7ccc8]"; break;
       default: themeClass = "bg-white text-gray-900"; break;
     }
 
@@ -383,6 +388,9 @@ export default function Tsunovel() {
       case 'serif': fontClass = "serif"; break;
       case 'noto-serif': fontClass = "'Noto Serif JP', serif"; break;
       case 'noto-sans': fontClass = "'Noto Sans JP', sans-serif"; break;
+      case 'mplus': fontClass = "'M PLUS 1p', sans-serif"; break;
+      case 'zen-kaku': fontClass = "'Zen Kaku Gothic New', sans-serif"; break;
+      case 'courier': fontClass = "'Courier Prime', monospace"; break;
       default: fontClass = "sans-serif"; break;
     }
 
@@ -391,7 +399,8 @@ export default function Tsunovel() {
       style: {
         fontSize: `${readerSettings.fontSize}px`,
         lineHeight: readerSettings.lineHeight,
-        fontFamily: fontClass
+        fontFamily: fontClass,
+        color: readerSettings.textColor || undefined
       }
     };
   };
@@ -667,6 +676,10 @@ export default function Tsunovel() {
                             { id: 'midnight', icon: Bookmark, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
                             { id: 'ivory', icon: Type, label: 'アイボ', class: 'bg-[#fffff0] text-[#2d241e]' },
                             { id: 'softgreen', icon: Book, label: 'グリーン', class: 'bg-[#f0f9f0] text-[#2d4a2d]' },
+                            { id: 'ocean', icon: MousePointer2, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
+                            { id: 'forest', icon: Plus, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
+                            { id: 'paper', icon: Book, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
+                            { id: 'coffee-deep', icon: Coffee, label: '珈琲', class: 'bg-[#3e2723] text-[#d7ccc8]' },
                           ].map(t => (
                             <button
                               key={t.id}
@@ -691,11 +704,14 @@ export default function Tsunovel() {
                             { id: 'sans', label: '標準ゴシック', font: 'font-sans' },
                             { id: 'noto-serif', label: 'Noto Serif', font: 'font-serif' },
                             { id: 'noto-sans', label: 'Noto Sans', font: 'font-sans' },
+                            { id: 'mplus', label: 'M PLUS 1p', font: 'font-sans' },
+                            { id: 'zen-kaku', label: 'Zen Kaku', font: 'font-sans' },
+                            { id: 'courier', label: 'Courier', font: 'font-mono' },
                           ].map(f => (
                             <button
                               key={f.id}
                               onClick={() => setReaderSettings({ ...readerSettings, fontFamily: f.id })}
-                              className={`py-2 px-3 rounded-md text-sm transition-all ${readerSettings.fontFamily === f.id ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
+                              className={`py-2 px-2 rounded-md text-xs transition-all ${readerSettings.fontFamily === f.id ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
                             >
                               <span className={f.font}>{f.label}</span>
                             </button>
@@ -703,25 +719,77 @@ export default function Tsunovel() {
                         </div>
                       </div>
 
+                      {/* 文字色設定 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字色</label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, textColor: '' })}
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${readerSettings.textColor === '' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white text-gray-400'}`}
+                            title="テーマのデフォルト色を使用"
+                          >
+                            自動
+                          </button>
+                          {[
+                            '#000000', '#333333', '#666666', '#999999',
+                            '#d7ccc8', '#5b4636', '#1b5e20', '#004d40',
+                            '#0d47a1', '#b71c1c'
+                          ].map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setReaderSettings({ ...readerSettings, textColor: color })}
+                              className={`w-8 h-8 rounded-full border-2 transition-all ${readerSettings.textColor === color ? 'border-indigo-500 scale-110' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                          <div className="relative group">
+                            <input
+                              type="color"
+                              value={readerSettings.textColor || '#000000'}
+                              onChange={(e) => setReaderSettings({ ...readerSettings, textColor: e.target.value })}
+                              className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer overflow-hidden p-0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
                       {/* 文字サイズと行間 */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
                         <div>
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字サイズ</label>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.max(12, readerSettings.fontSize - 1) })}
+                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <Minus size={14} />
+                            </button>
                             <input
                               type="range"
                               min="12"
                               max="40"
                               value={readerSettings.fontSize}
                               onChange={(e) => setReaderSettings({ ...readerSettings, fontSize: parseInt(e.target.value) })}
-                              className="w-full accent-indigo-600"
+                              className="flex-1 accent-indigo-600"
                             />
-                            <span className="text-xs font-mono w-8 text-right font-bold">{readerSettings.fontSize}</span>
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.min(40, readerSettings.fontSize + 1) })}
+                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <Plus size={14} />
+                            </button>
+                            <span className="text-xs font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
                           </div>
                         </div>
                         <div>
                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">行間</label>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(1.2, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
+                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <Minus size={14} />
+                            </button>
                             <input
                               type="range"
                               min="1.2"
@@ -729,9 +797,15 @@ export default function Tsunovel() {
                               step="0.1"
                               value={readerSettings.lineHeight}
                               onChange={(e) => setReaderSettings({ ...readerSettings, lineHeight: parseFloat(e.target.value) })}
-                              className="w-full accent-indigo-600"
+                              className="flex-1 accent-indigo-600"
                             />
-                            <span className="text-xs font-mono w-8 text-right font-bold">{readerSettings.lineHeight}</span>
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.min(3.0, Math.round((readerSettings.lineHeight + 0.1) * 10) / 10) })}
+                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <Plus size={14} />
+                            </button>
+                            <span className="text-xs font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
                           </div>
                         </div>
                       </div>
