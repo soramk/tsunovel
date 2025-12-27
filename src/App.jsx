@@ -281,18 +281,63 @@ export default function Tsunovel() {
     }
   };
 
+  /**
+   * 小説の情報を最新に同期・更新する
+   */
+  const handleSyncNovel = async (novelId) => {
+    const novel = novels.find(n => n.id === novelId);
+    if (!novel) return;
+
+    setIsDownloading(true);
+    setDownloadProgress(`${novel.title} を更新中...`);
+
+    try {
+      // GitHub Actionsをトリガー
+      await triggerFetch(novel.ncode, githubConfig);
+
+      setDownloadProgress('同期中... 完了まで最大1分かかります。');
+
+      // 結果をポーリング（info.jsonを再取得）
+      const data = await pollData(novel.ncode, githubConfig);
+
+      console.log('Novel sync completed:', data);
+
+      // novels ステートを更新
+      setNovels(prev => prev.map(n =>
+        n.id === novelId ? {
+          ...n,
+          title: data.title || n.title,
+          author: data.writer || data.author || n.author,
+          info: data
+        } : n
+      ));
+
+      setDownloadProgress('更新が完了しました');
+      setTimeout(() => {
+        setIsDownloading(false);
+        setDownloadProgress('');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error syncing novel:', error);
+      setDownloadProgress(`同期エラー: ${error.message}`);
+      setTimeout(() => setIsDownloading(false), 5000);
+    }
+  };
+
   const nextChapter = () => {
     const novel = novels.find(n => n.id === currentNovelId);
     if (!novel || !novel.info) return;
 
-    // 現在表示されている最後の章を取得
-    const lastLoadedChapter = readerChapters.length > 0
-      ? readerChapters[readerChapters.length - 1].chapterNum
-      : currentChapter;
+    // スクロールモードでも「次の話」ボタンが押された場合は、
+    // 現在のチャプターをインクリメントして、単体ロード（または末尾追加）を行う
+    const nextNum = currentChapter + 1;
 
-    if (lastLoadedChapter < novel.info.general_all_no) {
-      const isScrollMode = readerSettings.transitionMode === 'scroll';
-      loadChapter(currentNovelId, lastLoadedChapter + 1, isScrollMode);
+    if (nextNum <= novel.info.general_all_no) {
+      // ボタンクリック時は常に「遷移先」としてロードしたいので isAppend=false にする
+      // （または、スクロールモードで「続きから読んでいる」感覚を出すなら true でも良いが
+      // ユーザーが「反応しない」と言っているのは、画面が変わらないことへの不満と思われる）
+      loadChapter(currentNovelId, nextNum, false);
     }
   };
 
@@ -674,6 +719,20 @@ export default function Tsunovel() {
 
                         </div>
 
+                        {/* 更新ボタン */}
+                        <div className="absolute -top-4 -right-4 z-50 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-[-10px]">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSyncNovel(novel.id);
+                            }}
+                            className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all"
+                            title="最新の状態に更新"
+                          >
+                            <Loader className={`${isDownloading && downloadProgress.includes(novel.title) ? 'animate-spin' : ''}`} size={18} />
+                          </button>
+                        </div>
+
                         {/* 床の影 */}
                         <div className={`
                       absolute -bottom-8 left-2 right-2 h-4 bg-black/50 blur-lg rounded-[100%] 
@@ -1005,7 +1064,7 @@ export default function Tsunovel() {
           </footer>
 
           {/* Reader Content */}
-          <div className={`${getReaderStyles().className} pt-12`} style={getReaderStyles().style}>
+          <div className={`${getReaderStyles().className} pt-24`} style={getReaderStyles().style}>
             <div className="max-w-2xl mx-auto pb-32">
               <div className="mb-12 text-center border-b border-current/10 pb-8">
                 <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
