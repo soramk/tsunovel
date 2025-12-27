@@ -36,5 +36,6 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "storage: fetch novel data for ${{ github.event.client_payload.ncode }}"
-            git push
+            git pull --rebase origin main
+            git push origin main
           fi
