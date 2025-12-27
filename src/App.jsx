@@ -501,10 +501,7 @@ export default function Tsunovel() {
           <header className="bg-[#1e1915] text-[#d7ccc8] shadow-2xl sticky top-0 z-30 border-b border-[#3e2723]">
             <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-[#4e342e] p-1.5 rounded-lg shadow-inner border border-[#5d4037]">
-                  <Book size={20} className="text-[#d7ccc8]" />
-                </div>
-                <h1 className="text-xl font-bold tracking-wider font-serif">Tsunovel</h1>
+                <img src="/pict/title.png" alt="Tsunovel" className="h-10 w-auto" />
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -561,16 +558,26 @@ export default function Tsunovel() {
                   <p className="text-xs">「小説を追加」から作品をダウンロードしてください</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-8 gap-y-20 px-4 pb-20">
+                <div className="flex flex-wrap justify-center gap-x-12 gap-y-16 px-4 pb-20 max-w-5xl mx-auto">
                   {novels.map((novel, index) => {
                     const isOpening = openingBookId === novel.id;
-                    // 画像URLを固定IDで生成
                     const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
+
+                    // 「積読」感を出すためのランダムなオフセットと回転
+                    // シード値として id を利用して固定する
+                    const seed = (novel.id % 100) / 100;
+                    const rotate = (seed * 10 - 5).toFixed(1); // -5deg to 5deg
+                    const translateX = (seed * 20 - 10).toFixed(1); // -10px to 10px
+                    const translateY = (seed * 15 - 7.5).toFixed(1); // -7.5px to 7.5px
 
                     return (
                       <div
                         key={novel.id}
-                        className={`relative group perspective-1000 ${isOpening ? 'z-50' : 'z-0'}`}
+                        className={`relative group perspective-1000 ${isOpening ? 'z-50' : 'hover:z-40'}`}
+                        style={{
+                          transform: !isOpening ? `rotate(${rotate}deg) translate(${translateX}px, ${translateY}px)` : 'none',
+                          transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0s'
+                        }}
                       >
 
                         {/* --- 3D BOOK STRUCTURE --- */}
@@ -652,11 +659,10 @@ export default function Tsunovel() {
                         `}
                             style={{ transform: `rotateY(180deg)` }}
                           >
-                            <div className="text-center opacity-70 w-full">
-                              <div className="border-4 border-double border-gray-300 p-4 m-2">
-                                <p className="font-serif text-gray-800 text-sm italic mb-2 line-clamp-2">{novel.title}</p>
-                                <div className="w-full h-[1px] bg-gray-300 mx-auto my-2"></div>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Tsunovel Library</p>
+                            <div className="text-center opacity-70 w-full p-2">
+                              <div className="border-2 border-double border-gray-300 p-2">
+                                <p className="font-serif text-gray-800 text-[10px] italic mb-1 line-clamp-1">{novel.title}</p>
+                                <p className="text-[8px] text-gray-500">{novel.author}</p>
                               </div>
                             </div>
                           </div>
@@ -957,32 +963,41 @@ export default function Tsunovel() {
             </div>
           )}
 
-          {/* Reader Content */}
-          <div className={getReaderStyles().className} style={getReaderStyles().style}>
-            <div className="max-w-2xl mx-auto pt-20 pb-32">
-              {/* Top Navigation */}
-              <div className="flex items-center justify-between mb-12 opacity-60 hover:opacity-100 transition-opacity pb-4 border-b border-current/10">
-                <button
-                  onClick={prevChapter}
-                  disabled={currentChapter <= 1}
-                  className="px-4 py-2 rounded-full border border-current flex items-center gap-2 text-xs font-bold disabled:opacity-20 disabled:cursor-not-allowed hover:bg-current hover:text-white transition-all"
-                >
-                  <ArrowLeft size={14} />
-                  前の話
-                </button>
-                <span className="text-[10px] font-serif italic">
-                  Episode {currentChapter} / {currentNovel?.info?.general_all_no}
+          {/* Sticky Reader Header */}
+          <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-current/10 backdrop-blur-md bg-opacity-80 p-3 h-14 flex items-center justify-center ${getReaderStyles().className}`}>
+            <div className="max-w-2xl w-full flex items-center justify-between px-4">
+              <button
+                onClick={prevChapter}
+                disabled={currentChapter <= 1}
+                className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                title="前の話"
+              >
+                <ArrowLeft size={18} />
+              </button>
+
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-bold tracking-widest opacity-60 uppercase">
+                  {currentNovel?.title && currentNovel.title.length > 15 ? currentNovel.title.substring(0, 15) + '...' : currentNovel?.title}
                 </span>
-                <button
-                  onClick={nextChapter}
-                  disabled={!currentNovel || currentChapter >= currentNovel.info?.general_all_no}
-                  className="px-4 py-2 rounded-full border border-current flex items-center gap-2 text-xs font-bold disabled:opacity-20 disabled:cursor-not-allowed hover:bg-current hover:text-white transition-all"
-                >
-                  次の話
-                  <ArrowRight size={14} />
-                </button>
+                <span className="text-xs font-serif font-bold italic">
+                  Episode {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
+                </span>
               </div>
 
+              <button
+                onClick={nextChapter}
+                disabled={!currentNovel || currentChapter >= (currentNovel.info?.general_all_no || 0)}
+                className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                title="次の話"
+              >
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          </header>
+
+          {/* Reader Content */}
+          <div className={getReaderStyles().className} style={getReaderStyles().style}>
+            <div className="max-w-2xl mx-auto pt-24 pb-32">
               <div className="mb-12 text-center border-b border-current/10 pb-8">
                 <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
                   {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
