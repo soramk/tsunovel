@@ -61,6 +61,7 @@ export default function Tsunovel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [loadingChapters, setLoadingChapters] = useState(new Set());
   const [addMode, setAddMode] = useState('search'); // 'search' or 'url'
   const [urlInput, setUrlInput] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -200,6 +201,10 @@ export default function Tsunovel() {
     const novel = novels.find(n => n.id === novelId);
     if (!novel) return;
 
+    // 重複読み込み防止 (Setを使用)
+    if (loadingChapters.has(chapterNum)) return;
+    setLoadingChapters(prev => new Set(prev).add(chapterNum));
+
     if (mode === 'replace') {
       setIsLoadingChapter(true);
       setReaderChapters([]);
@@ -282,6 +287,11 @@ export default function Tsunovel() {
     } catch (error) {
       console.error('Error loading chapter:', error);
     } finally {
+      setLoadingChapters(prev => {
+        const next = new Set(prev);
+        next.delete(chapterNum);
+        return next;
+      });
       if (mode === 'replace') setIsLoadingChapter(false);
     }
   };
@@ -548,9 +558,11 @@ export default function Tsunovel() {
             : currentChapter;
 
           if (!isLoadingChapter && currentNovel && lastLoadedChapter < currentNovel.info?.general_all_no) {
-            // 重複読み込み防止のため簡易的なチェック
-            const isAlreadyLoadingNext = readerChapters.some(c => c.chapterNum === lastLoadedChapter + 1);
-            if (!isAlreadyLoadingNext) {
+            // 読み込み中または既にリストにある場合はスキップ
+            const isAlreadyLoaded = readerChapters.some(c => c.chapterNum === lastLoadedChapter + 1);
+            const isCurrentlyLoading = loadingChapters.has(lastLoadedChapter + 1);
+
+            if (!isAlreadyLoaded && !isCurrentlyLoading) {
               loadChapter(currentNovelId, lastLoadedChapter + 1, 'append');
             }
           }
@@ -563,8 +575,10 @@ export default function Tsunovel() {
             : currentChapter;
 
           if (!isLoadingChapter && currentNovel && firstLoadedChapter > 1) {
-            const isAlreadyLoadingPrev = readerChapters.some(c => c.chapterNum === firstLoadedChapter - 1);
-            if (!isAlreadyLoadingPrev) {
+            const isAlreadyLoaded = readerChapters.some(c => c.chapterNum === firstLoadedChapter - 1);
+            const isCurrentlyLoading = loadingChapters.has(firstLoadedChapter - 1);
+
+            if (!isAlreadyLoaded && !isCurrentlyLoading) {
               loadChapter(currentNovelId, firstLoadedChapter - 1, 'prepend');
             }
           }
