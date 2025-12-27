@@ -9,10 +9,11 @@ async function fetchNovel() {
         process.exit(1);
     }
 
-    const url = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}&gzip=5`;
+    const url = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}`;
     const userAgent = 'TsunovelBot/1.0 (GitHub Actions)';
 
     console.log(`Fetching novel data for ncode: ${ncode}`);
+    console.log(`URL: ${url}`);
 
     try {
         const response = await new Promise((resolve, reject) => {
@@ -23,7 +24,15 @@ async function fetchNovel() {
             }).on('error', reject);
         });
 
-        const jsonData = JSON.parse(response);
+        console.log('API Response received (first 100 chars):', response.substring(0, 100));
+
+        let jsonData;
+        try {
+            jsonData = JSON.parse(response);
+        } catch (e) {
+            console.error('Failed to parse JSON response. Response was:', response);
+            throw new Error(`JSON parse error: ${e.message}`);
+        }
         if (!jsonData || jsonData.length === 0) {
             throw new Error('Novel data not found or invalid response.');
         }
