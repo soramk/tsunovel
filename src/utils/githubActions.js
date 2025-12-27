@@ -97,25 +97,37 @@ export async function fetchIndex(config) {
         }
     } : {};
 
+    console.log('--- Fetch Index Debug ---');
+    console.log('URL:', url);
+    console.log('PAT set:', !!config.pat);
+
     try {
         const response = await fetch(url, fetchOptions);
+        console.log('Response Status:', response.status, response.statusText);
+
         if (response.ok) {
             const text = await response.text();
             try {
-                return JSON.parse(text);
+                const data = JSON.parse(text);
+                console.log('Successfully fetched index with', data.length, 'items');
+                return data;
             } catch (e) {
                 console.error('Failed to parse index JSON:', e);
-                return []; // JSONパース失敗時は空配列（形式エラーとして扱う）
+                console.log('Raw text received:', text.substring(0, 100) + '...');
+                return [];
             }
         } else {
-            console.error(`Fetch Index Error: ${response.status} ${response.statusText}`);
-            if (response.status === 401) console.error('Check if your PAT is valid.');
-            if (response.status === 404) console.error('storage/index.json not found in the repository.');
-            return null; // HTTPエラー時は null を返す
+            console.error(`Fetch Index Error Details:`);
+            console.error(`Status: ${response.status}`);
+            console.error(`StatusText: ${response.statusText}`);
+            if (response.status === 401) console.error('Authentication failed. Check your PAT scopes (repo scope required).');
+            if (response.status === 404) console.error('Path not found. Please verify "storage/index.json" exists on main branch.');
+            if (response.status === 403) console.error('Rate limit exceeded or forbidden access.');
+            return null;
         }
     } catch (error) {
-        console.error('Network Error fetching index:', error);
-        return null; // ネットワークエラーも null
+        console.error('Network Error during fetchIndex:', error);
+        return null;
     }
 }
 
