@@ -70,15 +70,24 @@ async function fetchNovel() {
                     'Accept-Encoding': 'gzip, deflate'
                 });
 
-                // 本文抽出 (最小一致で直近の </div> までを取得)
-                const honbunMatch = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i);
+                // 本文抽出 (新旧レイアウト対応)
+                const honbunPatterns = [
+                    /<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i,
+                    /<div class="[^"]*p-novel__text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+                    /<div[^>]+js-novel-text[^>]*>([\s\S]*?)<\/div>/i
+                ];
+
+                let honbunMatch = null;
+                for (const pattern of honbunPatterns) {
+                    const match = html.match(pattern);
+                    if (match && match[1]) {
+                        honbunMatch = match;
+                        break;
+                    }
+                }
 
                 if (honbunMatch && honbunMatch[1]) {
-                    // もし内部にさらに </div> が含まれている場合（通常なろうの本文内にはないが念のため）、
-                    // 抽出された内容をさらにクリーンアップする
-                    let contentRaw = honbunMatch[1];
-
-                    let content = contentRaw
+                    let content = honbunMatch[1]
                         .replace(/<p id="L\d+">/g, '')
                         .replace(/<\/p>/g, '\n')
                         .replace(/<br\s*\/?>/g, '\n')
@@ -94,13 +103,8 @@ async function fetchNovel() {
                     if (i === 1) fs.writeFileSync(path.join(dirPath, 'content.txt'), content);
                     console.log(`[${i}/${totalChapters}] SUCCESS. (${content.length} chars)`);
                 } else {
-                    console.error(`[${i}/${totalChapters}] FAILED to find content marker (#novel_honbun).`);
-                    // デバッグ用にHTMLの一部を表示
+                    console.error(`[${i}/${totalChapters}] FAILED to find content marker.`);
                     console.log('HTML Snippet (first 500 chars):', html.substring(0, 500));
-                    // HTML全体に #novel_honbun が含まれているかチェック
-                    if (html.toLowerCase().includes('id="novel_honbun"')) {
-                        console.log('Marker "novel_honbun" exists in HTML but Regex failed. Structure might be unusual.');
-                    }
                     if (html.includes('霞草')) console.log('Detected: Anti-Bot or Age Verification Page.');
                 }
             } catch (err) {
