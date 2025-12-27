@@ -71,42 +71,74 @@ async function fetchNovel() {
                     'Accept-Encoding': 'gzip, deflate'
                 });
 
-                // 本文抽出 (新旧レイアウト対応)
-                const honbunPatterns = [
-                    /<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i,
-                    /<div class="[^"]*p-novel__text[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-                    /<div[^>]+js-novel-text[^>]*>([\s\S]*?)<\/div>/i
+                // タイトル抽出
+                const titlePatterns = [
+                    /<h1 class="[^"]*p-novel__title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i,
+                    /<p class="novel_subtitle"[^>]*>([\s\S]*?)<\/p>/i
                 ];
-
-                let honbunMatch = null;
-                for (const pattern of honbunPatterns) {
+                let chapterTitle = "";
+                for (const pattern of titlePatterns) {
                     const match = html.match(pattern);
                     if (match && match[1]) {
-                        honbunMatch = match;
+                        chapterTitle = match[1].trim();
                         break;
                     }
                 }
 
-                if (honbunMatch && honbunMatch[1]) {
-                    let content = honbunMatch[1]
-                        .replace(/<p id="L\d+">/g, '')
-                        .replace(/<\/p>/g, '\n')
-                        .replace(/<br\s*\/?>/g, '\n')
-                        .replace(/&lt;/g, '<')
-                        .replace(/&gt;/g, '>')
-                        .replace(/&amp;/g, '&')
-                        .replace(/&quot;/g, '"')
-                        .replace(/&#39;/g, "'")
-                        .replace(/<[^>]*>/g, '') // 残ったタグを除去
-                        .trim();
+                // 各セクションの抽出
+                const sections = [
+                    { name: 'Preface', patterns: [/<div[^>]+p-novel__text--preface[^>]*>([\s\S]*?)<\/div>/i, /<div id="novel_p"[^>]*>([\s\S]*?)<\/div>/i] },
+                    { name: 'Body', patterns: [/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i, /<div class="[^"]*p-novel__body[^"]*"[^>]*>([\s\S]*?)<\/div>/i, /<div[^>]+js-novel-text[^>]*>([\s\S]*?)<\/div>/i] },
+                    { name: 'Afterword', patterns: [/<div[^>]+p-novel__text--afterword[^>]*>([\s\S]*?)<\/div>/i, /<div id="novel_a"[^>]*>([\s\S]*?)<\/div>/i] }
+                ];
 
-                    fs.writeFileSync(path.join(chaptersPath, `${i}.txt`), content);
-                    if (i === 1) fs.writeFileSync(path.join(dirPath, 'content.txt'), content);
-                    console.log(`[${i}/${totalChapters}] SUCCESS. (${content.length} chars)`);
+                let combinedContent = "";
+                if (chapterTitle) {
+                    combinedContent += `■ ${chapterTitle}\n\n`;
+                }
+
+                let foundAny = false;
+                for (const section of sections) {
+                    let sectionContent = "";
+                    for (const pattern of section.patterns) {
+                        const match = html.match(pattern);
+                        // 本文(Body)の場合は、クラス名によるマッチング時に preface/afterword を含まないものを優先したいが、
+                        // 現状の regex では最初に見つかったものを採用する。
+                        // 新レイアウトでは .p-novel__body の中に .p-novel__text が複数ある場合がある。
+                        if (match && match[1]) {
+                            // 抽出したHTMLからタグを除去してテキスト化
+                            let text = match[1]
+                                .replace(/<p id="L[pa]?\d+">/g, '')
+                                .replace(/<\/p>/g, '\n')
+                                .replace(/<br\s*\/?>/g, '\n')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#39;/g, "'")
+                                .replace(/<[^>]*>/g, '')
+                                .trim();
+
+                            if (text) {
+                                sectionContent = text;
+                                break;
+                            }
+                        }
+                    }
+                    if (sectionContent) {
+                        combinedContent += sectionContent + "\n\n";
+                        foundAny = true;
+                    }
+                }
+
+                if (foundAny) {
+                    const finalContent = combinedContent.trim();
+                    fs.writeFileSync(path.join(chaptersPath, `${i}.txt`), finalContent);
+                    if (i === 1) fs.writeFileSync(path.join(dirPath, 'content.txt'), finalContent);
+                    console.log(`[${i}/${totalChapters}] SUCCESS. (${finalContent.length} chars)`);
                 } else {
-                    console.error(`[${i}/${totalChapters}] FAILED to find content marker.`);
+                    console.error(`[${i}/${totalChapters}] FAILED to find any content sections.`);
                     console.log('HTML Snippet (first 500 chars):', html.substring(0, 500));
-                    if (html.includes('霞草')) console.log('Detected: Anti-Bot or Age Verification Page.');
                 }
             } catch (err) {
                 console.error(`[${i}/${totalChapters}] HTTP Error:`, err.message);
