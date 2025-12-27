@@ -34,8 +34,15 @@ export async function triggerFetch(ncode, config) {
  * 生成されたファイルをポーリングして取得する
  */
 export async function pollData(ncode, config) {
-    const { owner, repo } = config;
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/storage/${ncode}/info.json?t=${Date.now()}`;
+    const { owner, repo, pat } = config;
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/storage/${ncode}/info.json`;
+
+    const fetchOptions = pat ? {
+        headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Accept': 'application/vnd.github.v3.raw',
+        }
+    } : {};
 
     const maxRetries = 24; // 24 * 5s = 120s (2 minutes)
     let retries = 0;
@@ -43,7 +50,7 @@ export async function pollData(ncode, config) {
     return new Promise((resolve, reject) => {
         const poll = async () => {
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, fetchOptions);
 
                 if (response.ok) {
                     const data = await response.json();
@@ -76,7 +83,7 @@ export async function pollData(ncode, config) {
  */
 export async function fetchIndex(config) {
     const { owner, repo } = config;
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/storage/index.json?t=${Date.now()}`;
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/storage/index.json`;
 
     const fetchOptions = config.pat ? {
         headers: {

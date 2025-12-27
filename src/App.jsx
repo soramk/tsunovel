@@ -147,9 +147,9 @@ export default function Tsunovel() {
 
     setIsLoadingChapter(true);
     try {
-      // 1. chapters/{n}.txt の取得を試みる
-      const chapterUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/chapters/${chapterNum}.txt?t=${Date.now()}`;
-      const infoUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/info.json?t=${Date.now()}`;
+      // GitHub API 経由での取得に切り替え (Privateリポジトリ対応)
+      const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/chapters/${chapterNum}.txt`;
+      const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/info.json`;
 
       let novelContent = '';
       let infoData = novel.info || null;
@@ -157,17 +157,17 @@ export default function Tsunovel() {
       const fetchOptions = githubConfig.pat ? {
         headers: {
           'Authorization': `Bearer ${githubConfig.pat}`,
-          'Accept': 'application/vnd.github.v3.raw', // Rawデータを明示的に要求
+          'Accept': 'application/vnd.github.v3.raw', // Raw形式で取得
         }
       } : {};
 
-      console.log('Fetching chapter from:', chapterUrl);
+      console.log('Fetching chapter from API:', chapterUrl);
       const contentRes = await fetch(chapterUrl, fetchOptions);
       if (contentRes.ok) {
         novelContent = await contentRes.text();
       } else if (chapterNum === 1) {
         // 互換性のため content.txt も試す
-        const legacyUrl = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/storage/${novel.ncode}/content.txt?t=${Date.now()}`;
+        const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/content.txt`;
         const legacyRes = await fetch(legacyUrl, fetchOptions);
         if (legacyRes.ok) novelContent = await legacyRes.text();
       }
