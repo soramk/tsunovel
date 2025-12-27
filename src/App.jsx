@@ -173,9 +173,10 @@ export default function Tsunovel() {
 
     setIsLoadingChapter(true);
     try {
-      // GitHub API 経由での取得に切り替え (Privateリポジトリ対応)
-      const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/chapters/${chapterNum}.txt`;
-      const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/info.json`;
+      // GitHub API 経由での取得 (Nコードを確実に小文字にする)
+      const ncodeLower = novel.ncode.toLowerCase();
+      const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${chapterNum}.txt`;
+      const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/info.json`;
 
       let novelContent = '';
       let infoData = novel.info || null;
@@ -201,7 +202,7 @@ export default function Tsunovel() {
         console.log('Chapter fetch success, length:', novelContent.length);
       } else if (chapterNum === 1) {
         console.log('Chapter 1 not found, trying legacy content.txt...');
-        const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/content.txt`;
+        const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
         const legacyRes = await fetch(legacyUrl, fetchOptions);
         console.log('Legacy Response:', legacyRes.status);
         if (legacyRes.ok) {

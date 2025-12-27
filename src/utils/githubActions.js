@@ -35,7 +35,8 @@ export async function triggerFetch(ncode, config) {
  */
 export async function pollData(ncode, config) {
     const { owner, repo, pat } = config;
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/storage/${ncode}/info.json`;
+    const ncodeLower = ncode.toLowerCase();
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/storage/${ncodeLower}/info.json`;
 
     const fetchOptions = pat ? {
         headers: {
