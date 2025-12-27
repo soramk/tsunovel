@@ -180,6 +180,11 @@ export default function Tsunovel() {
       let novelContent = '';
       let infoData = novel.info || null;
 
+      console.log('--- Load Chapter Debug ---');
+      console.log('Chapter URL:', chapterUrl);
+      console.log('Info URL:', infoUrl);
+      console.log('Using PAT:', !!githubConfig.pat);
+
       const fetchOptions = githubConfig.pat ? {
         headers: {
           'Authorization': `Bearer ${githubConfig.pat}`,
@@ -187,23 +192,33 @@ export default function Tsunovel() {
         }
       } : {};
 
-      console.log('Fetching chapter from API:', chapterUrl);
+      console.log('Fetching chapter...');
       const contentRes = await fetch(chapterUrl, fetchOptions);
+      console.log('Chapter Response:', contentRes.status, contentRes.statusText);
+
       if (contentRes.ok) {
         novelContent = await contentRes.text();
+        console.log('Chapter fetch success, length:', novelContent.length);
       } else if (chapterNum === 1) {
-        // 互換性のため content.txt も試す
+        console.log('Chapter 1 not found, trying legacy content.txt...');
         const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${novel.ncode}/content.txt`;
         const legacyRes = await fetch(legacyUrl, fetchOptions);
-        if (legacyRes.ok) novelContent = await legacyRes.text();
+        console.log('Legacy Response:', legacyRes.status);
+        if (legacyRes.ok) {
+          novelContent = await legacyRes.text();
+          console.log('Legacy fetch success');
+        }
       }
 
       if (!infoData) {
+        console.log('Fetching info.json...');
         const infoRes = await fetch(infoUrl, fetchOptions);
+        console.log('Info Response:', infoRes.status);
         if (infoRes.ok) {
           const infoText = await infoRes.text();
           try {
             infoData = JSON.parse(infoText);
+            console.log('Info fetch success');
           } catch (e) {
             console.error('Failed to parse info JSON:', e);
           }
