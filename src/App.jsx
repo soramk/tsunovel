@@ -17,7 +17,7 @@ import {
   Loader
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode } from './utils/novelFetcher';
-import { triggerFetch, pollData } from './utils/githubActions';
+import { triggerFetch, pollData, fetchIndex } from './utils/githubActions';
 
 /**
  * Tsunovel - Prototype v5
@@ -29,53 +29,7 @@ import { triggerFetch, pollData } from './utils/githubActions';
  */
 
 // モックデータ
-const INITIAL_NOVELS = [
-  {
-    id: 1,
-    title: "異世界で猫とカフェを開いたら最強だった件",
-    author: "猫好き太郎",
-    site: "WebNovelSite A",
-    status: "reading",
-    progress: 45,
-    content: `　目が覚めると、そこは知らない森の中だった。\n「にゃーん」\n　足元で鳴き声がした。見下ろすと、三毛猫が座っている。\n「お前、どこから来たんだ？」\n　俺が尋ねると、猫は人間の言葉で答えた。\n『吾輩は案内人である。お主をこの世界の覇者にするために来た』\n\n　そう言われても、俺には何の実感もなかった。ただ、この猫が何か特別な存在であることは確かだった。\n\n　森を抜けると、そこには古びた建物が一軒だけ立っていた。看板には「猫カフェ・ツナ」と書かれている。\n「ここで働けということか？」\n『そうだ。お主にはこの店を繁盛させる使命がある』\n\n　俺は戸惑いながらも、その建物の中に入った。すると、不思議なことに、店の作り方やコーヒーの淹れ方、猫との接し方まで、すべてが頭の中に流れ込んできた。\n「これは……一体……」\n\n　数週間後、店は大繁盛していた。異世界の住人たちが、この不思議な猫カフェに集まってくる。そして、俺は気づいた。この店で働くことで、俺自身の力がどんどん強くなっていることに。`
-  },
-  {
-    id: 2,
-    title: "ループする火曜日：午前7時の目覚まし時計",
-    author: "SF好き子",
-    site: "NovelPost",
-    status: "unread",
-    progress: 0,
-    content: `　ジリリリリリ！\n　目覚まし時計の音で目が覚める。時計の針は7時を指している。\n「またか……」\n　俺はため息をついた。これで100回目の火曜日だ。\n\n　最初の頃は、この時間ループを楽しんでいた。何度でもやり直せる。失敗しても大丈夫。でも、今は違う。この繰り返しから抜け出す方法を探すことに、すべての時間を費やしている。\n\n　カーテンを開ける。外はいつもと同じ朝の風景。同じ鳥が同じ場所で鳴いている。同じ新聞配達員が同じルートを通っている。\n「今日こそ、何か違うことが起きるはずだ」\n\n　しかし、その期待は毎回裏切られる。7時15分、いつものコーヒーショップで同じコーヒーを注文する。7時30分、同じ電車に乗る。8時、同じオフィスで同じ仕事をする。\n\n　でも、今日は違う気がする。なぜなら、目覚まし時計の音が、いつもより0.5秒長かったからだ。`
-  },
-  {
-    id: 3,
-    title: "古びた図書館の魔導書管理係",
-    author: "ファンタジー職人",
-    site: "Kakuyomu-like",
-    status: "completed",
-    progress: 100,
-    content: `（サンプルテキスト）これは読了した小説のサンプルです。最後まで読み終わった達成感は格別です。\n\n　古びた図書館で働き始めて、もう10年が経つ。ここには、世界中から集められた魔導書が保管されている。\n\n　毎日、新しい本が届く。古い本が修復される。そして、時々、本が勝手に動く。\n「今日も元気だな」\n\n　俺は微笑みながら、飛び回る魔導書を手で受け止めた。この仕事は、決して退屈ではない。`
-  },
-  {
-    id: 4,
-    title: "星屑の魔法使いと錆びたロボット",
-    author: "CosmoWriter",
-    site: "Naro-like",
-    status: "unread",
-    progress: 0,
-    content: `昔々、ある惑星に、魔法使いとロボットが住んでいました。\n\n　魔法使いの名前はルナ。彼女は星の光を操る力を持っていました。\n　ロボットの名前はR-7。彼は何百年も前に作られた、古い型のロボットでした。\n\n　二人は、この惑星で最後に残された存在でした。他のすべての生命体は、長い戦争の末に消え去ってしまったのです。\n\n「R-7、今日も星がきれいね」\n「はい、ルナ様。本日の星の輝度は通常の120パーセントです」\n\n　ルナは笑った。R-7はいつも、感情を数値で表現する。でも、それが彼の優しさの表れだと、ルナは知っていた。\n\n　二人は毎晩、星を見上げながら、失われた世界について語り合いました。そして、いつか、新しい生命がこの惑星に戻ってくることを願っていました。`
-  },
-  {
-    id: 5,
-    title: "ダンジョン飯テロ：スライムの煮込み編",
-    author: "GourmetHunter",
-    site: "Kakuyomu-like",
-    status: "reading",
-    progress: 15,
-    content: `「いいか、スライムは酸味が強いから、まずは重曹で中和するんだ」\n\n　俺は、巨大なスライムを前にして、調理道具を並べていた。\n「そして、低温でじっくり煮込む。これで、プリプリの食感が残る」\n\n　ダンジョンでモンスターを倒すだけが冒険者の仕事じゃない。本当の冒険は、そのモンスターをどう料理するかだ。\n\n「さあ、できた！」\n\n　スライムの煮込みが完成した。見た目は、まるでゼリーのよう。でも、味は……\n「うまい！」\n\n　これが、俺の冒険の始まりだった。`
-  }
-];
+const INITIAL_NOVELS = [];
 
 const MOCK_SEARCH_DB = [
   { title: "転生したらスライムだった件", author: "伏瀬", site: "Shosetsuka ni Naro", desc: "スライムとして異世界転生した主人公が...", keyword: "slime fantasy" },
@@ -116,6 +70,27 @@ export default function Tsunovel() {
 
   const settingsRef = useRef(null);
 
+  // 初期読み込み: docs/index.json から小説一覧を取得
+  useEffect(() => {
+    const loadIndex = async () => {
+      const index = await fetchIndex(githubConfig);
+      if (index && index.length > 0) {
+        const loadedNovels = index.map(item => ({
+          id: item.ncode,
+          title: item.title,
+          author: item.writer,
+          site: '小説家になろう',
+          status: 'unread',
+          progress: 0,
+          ncode: item.ncode,
+          content: null // 後で取得
+        }));
+        setNovels(loadedNovels);
+      }
+    };
+    loadIndex();
+  }, []);
+
   // 設定パネルの外側クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -134,12 +109,34 @@ export default function Tsunovel() {
   }, [isSettingsOpen]);
 
   // 本を開くアニメーション処理
-  const handleBookClick = (novelId) => {
+  const handleBookClick = async (novelId) => {
     if (openingBookId) return;
 
-    setOpeningBookId(novelId);
+    const novel = novels.find(n => n.id === novelId);
 
-    // 1.5秒後に画面遷移（アニメーション完了待ち）
+    // コンテンツが未取得の場合は取得する
+    if (novel && !novel.content) {
+      try {
+        setOpeningBookId(novelId);
+        const url = `https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/docs/${novel.ncode}/info.json?t=${Date.now()}`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          setNovels(prev => prev.map(n =>
+            n.id === novelId ? {
+              ...n,
+              content: data.story ? `【あらすじ】\n\n${data.story}\n\n\n※本文は小説家になろうのサイトで直接ご覧ください。` : 'コンテンツ情報がありません。'
+            } : n
+          ));
+        }
+      } catch (error) {
+        console.error('Error loading novel content:', error);
+      }
+    } else {
+      setOpeningBookId(novelId);
+    }
+
+    // 1.5秒後に画面遷移
     setTimeout(() => {
       setCurrentNovelId(novelId);
       setViewMode('reader');

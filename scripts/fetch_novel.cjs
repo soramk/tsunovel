@@ -49,8 +49,30 @@ async function fetchNovel() {
 
         const filePath = path.join(dirPath, 'info.json');
         fs.writeFileSync(filePath, JSON.stringify(novelInfo, null, 2));
-
         console.log(`Successfully saved novel data to ${filePath}`);
+
+        // docs/index.json を更新（一覧用）
+        const indexPath = path.join('docs', 'index.json');
+        let indexData = [];
+        if (fs.existsSync(indexPath)) {
+            try {
+                indexData = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+            } catch (e) {
+                indexData = [];
+            }
+        }
+
+        // 既存のncodeがあれば削除して新しいデータを追加
+        indexData = indexData.filter(item => item.ncode !== novelInfo.ncode);
+        indexData.unshift({
+            ncode: novelInfo.ncode,
+            title: novelInfo.title,
+            writer: novelInfo.writer,
+            added_at: new Date().toISOString()
+        });
+
+        fs.writeFileSync(indexPath, JSON.stringify(indexData, null, 2));
+        console.log(`Updated index file at ${indexPath}`);
     } catch (error) {
         console.error('Error fetching novel data:', error.message);
         process.exit(1);

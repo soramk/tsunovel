@@ -70,3 +70,23 @@ export async function pollData(ncode, config) {
         poll();
     });
 }
+
+/**
+ * 保存済みの小説一覧（docs/index.json）を取得する
+ */
+export async function fetchIndex(config) {
+    const { owner, repo } = config;
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/docs/index.json?t=${Date.now()}`;
+
+    try {
+        const response = await fetch(url);
+        if (response.ok) {
+            return await response.json();
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching index:', error);
+        return [];
+    }
+}
+
