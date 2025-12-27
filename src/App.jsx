@@ -17,6 +17,8 @@ import {
   Loader,
   ChevronRight,
   ChevronLeft,
+  ArrowLeft,
+  ArrowRight,
   Menu,
   Bookmark,
   MousePointer2,
@@ -390,6 +392,10 @@ export default function Tsunovel() {
       case 'noto-sans': fontClass = "'Noto Sans JP', sans-serif"; break;
       case 'mplus': fontClass = "'M PLUS 1p', sans-serif"; break;
       case 'zen-kaku': fontClass = "'Zen Kaku Gothic New', sans-serif"; break;
+      case 'kaisei': fontClass = "'Kaisei Tokumin', serif"; break;
+      case 'shippori': fontClass = "'Shippori Mincho', serif"; break;
+      case 'dotgothic': fontClass = "'DotGothic16', sans-serif"; break;
+      case 'hina': fontClass = "'Hina Mincho', serif"; break;
       case 'courier': fontClass = "'Courier Prime', monospace"; break;
       default: fontClass = "sans-serif"; break;
     }
@@ -704,8 +710,12 @@ export default function Tsunovel() {
                             { id: 'sans', label: '標準ゴシック', font: 'font-sans' },
                             { id: 'noto-serif', label: 'Noto Serif', font: 'font-serif' },
                             { id: 'noto-sans', label: 'Noto Sans', font: 'font-sans' },
-                            { id: 'mplus', label: 'M PLUS 1p', font: 'font-sans' },
+                            { id: 'mplus', label: 'M PLUS', font: 'font-sans' },
                             { id: 'zen-kaku', label: 'Zen Kaku', font: 'font-sans' },
+                            { id: 'kaisei', label: 'Kaisei', font: 'font-serif' },
+                            { id: 'shippori', label: 'Shippori', font: 'font-serif' },
+                            { id: 'hina', label: 'Hina', font: 'font-serif' },
+                            { id: 'dotgothic', label: 'DotGothic', font: 'font-sans' },
                             { id: 'courier', label: 'Courier', font: 'font-mono' },
                           ].map(f => (
                             <button
@@ -760,9 +770,10 @@ export default function Tsunovel() {
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.max(12, readerSettings.fontSize - 1) })}
-                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="小さく"
                             >
-                              <Minus size={14} />
+                              <Minus size={18} />
                             </button>
                             <input
                               type="range"
@@ -770,15 +781,16 @@ export default function Tsunovel() {
                               max="40"
                               value={readerSettings.fontSize}
                               onChange={(e) => setReaderSettings({ ...readerSettings, fontSize: parseInt(e.target.value) })}
-                              className="flex-1 accent-indigo-600"
+                              className="flex-1 accent-indigo-600 h-2"
                             />
                             <button
                               onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.min(40, readerSettings.fontSize + 1) })}
-                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="大きく"
                             >
-                              <Plus size={14} />
+                              <Plus size={18} />
                             </button>
-                            <span className="text-xs font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
+                            <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
                           </div>
                         </div>
                         <div>
@@ -786,9 +798,10 @@ export default function Tsunovel() {
                           <div className="flex items-center gap-3">
                             <button
                               onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(1.2, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
-                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="狭く"
                             >
-                              <Minus size={14} />
+                              <Minus size={18} />
                             </button>
                             <input
                               type="range"
@@ -797,15 +810,16 @@ export default function Tsunovel() {
                               step="0.1"
                               value={readerSettings.lineHeight}
                               onChange={(e) => setReaderSettings({ ...readerSettings, lineHeight: parseFloat(e.target.value) })}
-                              className="flex-1 accent-indigo-600"
+                              className="flex-1 accent-indigo-600 h-2"
                             />
                             <button
                               onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.min(3.0, Math.round((readerSettings.lineHeight + 0.1) * 10) / 10) })}
-                              className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="広く"
                             >
-                              <Plus size={14} />
+                              <Plus size={18} />
                             </button>
-                            <span className="text-xs font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
+                            <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
                           </div>
                         </div>
                       </div>
@@ -890,6 +904,29 @@ export default function Tsunovel() {
           {/* Reader Content */}
           <div className={getReaderStyles().className} style={getReaderStyles().style}>
             <div className="max-w-2xl mx-auto pt-20 pb-32">
+              {/* Top Navigation */}
+              <div className="flex items-center justify-between mb-12 opacity-60 hover:opacity-100 transition-opacity pb-4 border-b border-current/10">
+                <button
+                  onClick={prevChapter}
+                  disabled={currentChapter <= 1}
+                  className="px-4 py-2 rounded-full border border-current flex items-center gap-2 text-xs font-bold disabled:opacity-20 disabled:cursor-not-allowed hover:bg-current hover:text-white transition-all"
+                >
+                  <ArrowLeft size={14} />
+                  前の話
+                </button>
+                <span className="text-[10px] font-serif italic">
+                  Episode {currentChapter} / {currentNovel?.info?.general_all_no}
+                </span>
+                <button
+                  onClick={nextChapter}
+                  disabled={!currentNovel || currentChapter >= currentNovel.info?.general_all_no}
+                  className="px-4 py-2 rounded-full border border-current flex items-center gap-2 text-xs font-bold disabled:opacity-20 disabled:cursor-not-allowed hover:bg-current hover:text-white transition-all"
+                >
+                  次の話
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+
               <div className="mb-12 text-center border-b border-current/10 pb-8">
                 <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
                   {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
@@ -933,7 +970,7 @@ export default function Tsunovel() {
                     className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
                   >
                     次の話
-                    <ArrowLeft size={18} className="rotate-180" />
+                    <ArrowRight size={18} />
                   </button>
                 </div>
               )}
