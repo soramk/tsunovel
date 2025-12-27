@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Book, 
-  Plus, 
-  Settings, 
-  Moon, 
-  Sun, 
-  Coffee, 
-  ArrowLeft, 
+import {
+  Book,
+  Plus,
+  Settings,
+  Moon,
+  Sun,
+  Coffee,
+  ArrowLeft,
   Search,
   X,
   Type,
@@ -16,7 +16,8 @@ import {
   Download,
   Loader
 } from 'lucide-react';
-import { fetchNovelContent } from './utils/novelFetcher';
+import { fetchNovelContent, extractNcode } from './utils/novelFetcher';
+import { triggerFetch, pollData } from './utils/githubActions';
 
 /**
  * Tsunovel - Prototype v5
@@ -91,16 +92,21 @@ export default function Tsunovel() {
   const [viewMode, setViewMode] = useState('library');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
+
   // アニメーション制御用ステート
-  const [openingBookId, setOpeningBookId] = useState(null); 
-  
+  const [openingBookId, setOpeningBookId] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [addMode, setAddMode] = useState('search'); // 'search' or 'url'
   const [urlInput, setUrlInput] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState('');
+  const [githubConfig, setGithubConfig] = useState({
+    owner: 'sora0', // デフォルト値を設定
+    repo: 'tsunovel',
+    pat: '', // ユーザーが設定できるようにする
+  });
 
   const [readerSettings, setReaderSettings] = useState({
     theme: 'sepia',
@@ -132,14 +138,14 @@ export default function Tsunovel() {
     if (openingBookId) return;
 
     setOpeningBookId(novelId);
-    
+
     // 1.5秒後に画面遷移（アニメーション完了待ち）
     setTimeout(() => {
       setCurrentNovelId(novelId);
       setViewMode('reader');
-      setOpeningBookId(null); 
-      
-      setNovels(prev => prev.map(n => 
+      setOpeningBookId(null);
+
+      setNovels(prev => prev.map(n =>
         n.id === novelId && n.status === 'unread' ? { ...n, status: 'reading' } : n
       ));
     }, 1500);
@@ -157,7 +163,7 @@ export default function Tsunovel() {
       setSearchResults([]);
       return;
     }
-    const results = MOCK_SEARCH_DB.filter(item => 
+    const results = MOCK_SEARCH_DB.filter(item =>
       item.title.includes(query) || item.author.includes(query) || item.keyword.includes(query.toLowerCase())
     );
     setSearchResults(results);
@@ -187,22 +193,37 @@ export default function Tsunovel() {
 
     try {
       console.log('Fetching novel from URL:', urlInput);
-      
-      // フロントエンドから直接小説情報を取得
-      const data = await fetchNovelContent(urlInput);
-      
-      console.log('Novel data fetched:', data);
+
+      const ncode = extractNcode(urlInput);
+      if (!ncode) {
+        throw new Error('小説家になろうのURLからNコードを抽出できませんでした');
+      }
+
+      setDownloadProgress('GitHub Actionsを起動中...');
+
+      // GitHub Actionsをトリガー
+      await triggerFetch(ncode, githubConfig);
+
+      setDownloadProgress('バックエンドで処理中... 完了まで最大1-2分かかります。');
+
+      // 結果をポーリング
+      const data = await pollData(ncode, githubConfig);
+
+      console.log('Novel data fetched via GitHub Actions:', data);
       setDownloadProgress('ライブラリに追加中...');
 
       const newNovel = {
         id: Date.now(),
         title: data.title || 'タイトル不明',
-        author: data.author || '著者不明',
-        site: data.site || new URL(urlInput).hostname,
+        author: data.writer || data.author || '著者不明',
+        site: '小説家になろう',
         status: 'unread',
         progress: 0,
-        content: data.content || 'コンテンツを取得できませんでした。',
-        url: urlInput
+        content: data.story
+          ? `【あらすじ】\n\n${data.story}\n\n\n※本文は小説家になろうのサイトで直接ご覧ください。\nURL: ${urlInput}`
+          : '※本文は小説家になろうのサイトで直接ご覧ください。',
+        url: urlInput,
+        ncode: ncode
       };
 
       setNovels([newNovel, ...novels]);
@@ -214,7 +235,7 @@ export default function Tsunovel() {
       console.error('Error downloading novel:', error);
       const errorMessage = error.message || '不明なエラーが発生しました';
       setDownloadProgress(`エラー: ${errorMessage}`);
-      
+
       // エラーメッセージは既にUIに表示されているため、5秒後にリセット
       setTimeout(() => {
         setIsDownloading(false);
@@ -229,12 +250,12 @@ export default function Tsunovel() {
     let fontClass = readerSettings.fontFamily === 'serif' ? "font-serif" : "font-sans";
     let sizeClass = "";
 
-    switch(readerSettings.theme) {
+    switch (readerSettings.theme) {
       case 'dark': themeClass = "bg-gray-900 text-gray-300"; break;
       case 'sepia': themeClass = "bg-[#f4ecd8] text-[#5b4636]"; break;
       default: themeClass = "bg-white text-gray-900"; break;
     }
-    switch(readerSettings.fontSize) {
+    switch (readerSettings.fontSize) {
       case 'small': sizeClass = "text-sm"; break;
       case 'large': sizeClass = "text-xl"; break;
       default: sizeClass = "text-base"; break;
@@ -244,7 +265,7 @@ export default function Tsunovel() {
 
   return (
     <div className="min-h-screen bg-[#2c241b] text-gray-100 font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden">
-      
+
       {/* --- Library Mode --- */}
       {viewMode === 'library' && (
         <>
@@ -256,7 +277,7 @@ export default function Tsunovel() {
                 </div>
                 <h1 className="text-xl font-bold tracking-wider font-serif">Tsunovel</h1>
               </div>
-              <button 
+              <button
                 onClick={() => setIsAddModalOpen(true)}
                 className="bg-[#8d6e63] hover:bg-[#795548] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 border border-[#a1887f]"
               >
@@ -267,10 +288,10 @@ export default function Tsunovel() {
           </header>
 
           <main className="max-w-7xl mx-auto px-4 py-12 relative min-h-[calc(100vh-64px)]">
-            
+
             <div className="mb-10 flex items-end gap-4 px-2">
-               <h2 className="font-serif text-3xl font-bold text-[#d7ccc8] drop-shadow-md">My Bookshelf</h2>
-               <div className="h-[1px] flex-1 bg-gradient-to-r from-[#d7ccc8]/30 to-transparent mb-2"></div>
+              <h2 className="font-serif text-3xl font-bold text-[#d7ccc8] drop-shadow-md">My Bookshelf</h2>
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-[#d7ccc8]/30 to-transparent mb-2"></div>
             </div>
 
             {/* Bookshelf Grid */}
@@ -279,34 +300,34 @@ export default function Tsunovel() {
                 const isOpening = openingBookId === novel.id;
                 // 画像URLを固定IDで生成
                 const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
-                
+
                 return (
-                  <div 
-                    key={novel.id} 
+                  <div
+                    key={novel.id}
                     className={`relative group perspective-1000 ${isOpening ? 'z-50' : 'z-0'}`}
                   >
-                    
+
                     {/* --- 3D BOOK STRUCTURE --- */}
-                    <div 
+                    <div
                       onClick={() => handleBookClick(novel.id)}
                       className={`
                         relative w-full aspect-[2/3] cursor-pointer preserve-3d ease-in-out
                         ${isOpening ? 'duration-[800ms]' : 'duration-300'}
-                        ${isOpening 
-                          ? 'translate-z-[200px] -translate-y-[50px] scale-110 rotate-y-[-10deg]' 
+                        ${isOpening
+                          ? 'translate-z-[200px] -translate-y-[50px] scale-110 rotate-y-[-10deg]'
                           : 'group-hover:translate-z-[30px] group-hover:-translate-y-[10px] group-hover:rotate-y-[-5deg]'
                         }
                       `}
                       style={{ transformStyle: 'preserve-3d' }}
                     >
                       {/* 1. FRONT COVER (表紙) */}
-                      <div 
+                      <div
                         className={`
                           absolute inset-0 rounded-r-sm rounded-l-sm shadow-2xl origin-left backface-hidden z-20
                           transition-transform ease-in-out border border-white/10
                           ${isOpening ? 'duration-[800ms] delay-[400ms] rotate-y-[-140deg]' : 'duration-300'}
                         `}
-                        style={{ 
+                        style={{
                           backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.1)), url(${coverImage})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
@@ -316,45 +337,45 @@ export default function Tsunovel() {
                         {/* 質感と影 */}
                         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/20 mix-blend-multiply rounded-sm"></div>
                         <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-white/20"></div>
-                        
+
                         {/* タイトルデザイン */}
                         <div className="relative h-full p-4 flex flex-col justify-between z-30">
                           <div className="border border-[#e0d0c0]/30 p-1 h-full flex flex-col backdrop-blur-[0.5px]">
-                             <div className="border border-[#e0d0c0]/20 flex-1 p-2 flex flex-col bg-black/10">
-                                <span className="text-[10px] tracking-widest text-[#e0d0c0]/80 uppercase mb-2 border-b border-[#e0d0c0]/20 pb-1 self-start">{novel.site}</span>
-                                <h3 className="font-serif font-bold text-white text-lg leading-snug drop-shadow-md line-clamp-4 filter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                                  {novel.title}
-                                </h3>
-                                <p className="mt-auto text-xs text-[#e0d0c0] font-medium text-right drop-shadow-sm">
-                                  {novel.author}
-                                </p>
-                             </div>
+                            <div className="border border-[#e0d0c0]/20 flex-1 p-2 flex flex-col bg-black/10">
+                              <span className="text-[10px] tracking-widest text-[#e0d0c0]/80 uppercase mb-2 border-b border-[#e0d0c0]/20 pb-1 self-start">{novel.site}</span>
+                              <h3 className="font-serif font-bold text-white text-lg leading-snug drop-shadow-md line-clamp-4 filter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+                                {novel.title}
+                              </h3>
+                              <p className="mt-auto text-xs text-[#e0d0c0] font-medium text-right drop-shadow-sm">
+                                {novel.author}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
                         {/* ステータスリボン */}
-                         {novel.status === 'reading' && (
-                           <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-red-700 to-red-600 shadow-md flex items-end justify-center pb-1 z-40">
-                             <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
-                           </div>
-                         )}
-                         {novel.status === 'completed' && (
-                           <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-green-700 to-green-600 shadow-md flex items-end justify-center pb-1 z-40">
-                             <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
-                           </div>
-                         )}
+                        {novel.status === 'reading' && (
+                          <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-red-700 to-red-600 shadow-md flex items-end justify-center pb-1 z-40">
+                            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
+                          </div>
+                        )}
+                        {novel.status === 'completed' && (
+                          <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-green-700 to-green-600 shadow-md flex items-end justify-center pb-1 z-40">
+                            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
+                          </div>
+                        )}
                       </div>
 
                       {/* 2. PAGE BLOCK (中身・厚み) */}
                       <div className="absolute inset-y-[1%] right-[1%] w-[98%] bg-[#fdfbf7] rounded-l-sm -translate-z-[4px] z-10">
-                        <div 
+                        <div
                           className="h-full w-full rounded-r-sm border-r border-gray-300 shadow-inner"
                           style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e0e0e0, #e0e0e0 1px, #fff 1px, #fff 3px)' }}
                         ></div>
                       </div>
 
                       {/* 3. INSIDE COVER (表紙の裏) */}
-                      <div 
+                      <div
                         className={`
                            absolute inset-0 bg-[#fffefc] rounded-r-sm rounded-l-sm origin-left backface-hidden z-10 flex items-center justify-center p-4
                            transition-transform ease-in-out border-l border-gray-200
@@ -362,13 +383,13 @@ export default function Tsunovel() {
                         `}
                         style={{ transform: `rotateY(180deg)` }}
                       >
-                         <div className="text-center opacity-70 w-full">
-                           <div className="border-4 border-double border-gray-300 p-4 m-2">
+                        <div className="text-center opacity-70 w-full">
+                          <div className="border-4 border-double border-gray-300 p-4 m-2">
                             <p className="font-serif text-gray-800 text-sm italic mb-2 line-clamp-2">{novel.title}</p>
                             <div className="w-full h-[1px] bg-gray-300 mx-auto my-2"></div>
                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">Tsunovel Library</p>
-                           </div>
-                         </div>
+                          </div>
+                        </div>
                       </div>
 
                       {/* 4. BACK COVER (裏表紙) */}
@@ -376,22 +397,22 @@ export default function Tsunovel() {
 
                       {/* 5. SPINE (背表紙) */}
                       <div className="absolute left-0 top-0 bottom-0 w-[14px] bg-[#2d211b] origin-left rotate-y-[-90deg] flex items-center justify-center overflow-hidden border-l border-white/10">
-                         <span className="text-[8px] text-gray-400 rotate-90 whitespace-nowrap opacity-50 tracking-widest">{novel.author}</span>
+                        <span className="text-[8px] text-gray-400 rotate-90 whitespace-nowrap opacity-50 tracking-widest">{novel.author}</span>
                       </div>
 
                     </div>
-                    
+
                     {/* 床の影 */}
                     <div className={`
                       absolute -bottom-8 left-2 right-2 h-4 bg-black/50 blur-lg rounded-[100%] 
                       transition-all ease-in-out
                       ${isOpening ? 'duration-[800ms] scale-75 opacity-30 translate-y-8' : 'duration-300 group-hover:scale-90 group-hover:opacity-60'}
                     `}></div>
-                    
+
                     {/* --- SHELF BOARD (棚板) --- */}
                     <div className="absolute -bottom-10 -left-6 -right-6 h-6 bg-[#3e2723] rounded-sm shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-[-1]">
-                       <div className="absolute top-0 left-0 right-0 h-2 bg-[#4e342e]"></div>
-                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30"></div>
+                      <div className="absolute top-0 left-0 right-0 h-2 bg-[#4e342e]"></div>
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30"></div>
                     </div>
                   </div>
                 );
@@ -415,7 +436,7 @@ export default function Tsunovel() {
             </div>
             <div className="flex items-center gap-2">
               <div className="relative" ref={settingsRef}>
-                <button 
+                <button
                   onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                   className="p-2 text-gray-600 hover:bg-[#e5e0d0] rounded-lg"
                 >
@@ -428,90 +449,82 @@ export default function Tsunovel() {
                       <div>
                         <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">テーマ</label>
                         <div className="flex bg-gray-100 rounded-lg p-1">
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, theme: 'light'})} 
-                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${
-                              readerSettings.theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, theme: 'light' })}
+                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${readerSettings.theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'
+                              }`}
                           >
-                            <Sun size={16}/>
+                            <Sun size={16} />
                             <span className="text-xs">ライト</span>
                           </button>
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, theme: 'sepia'})} 
-                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${
-                              readerSettings.theme === 'sepia' ? 'bg-[#f4ecd8] shadow-sm text-[#5b4636]' : 'text-gray-600'
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, theme: 'sepia' })}
+                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${readerSettings.theme === 'sepia' ? 'bg-[#f4ecd8] shadow-sm text-[#5b4636]' : 'text-gray-600'
+                              }`}
                           >
-                            <Coffee size={16}/>
+                            <Coffee size={16} />
                             <span className="text-xs">セピア</span>
                           </button>
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, theme: 'dark'})} 
-                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${
-                              readerSettings.theme === 'dark' ? 'bg-gray-700 shadow-sm text-white' : 'text-gray-600'
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, theme: 'dark' })}
+                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${readerSettings.theme === 'dark' ? 'bg-gray-700 shadow-sm text-white' : 'text-gray-600'
+                              }`}
                           >
-                            <Moon size={16}/>
+                            <Moon size={16} />
                             <span className="text-xs">ダーク</span>
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* フォント設定 */}
                       <div>
                         <label className="text-xs font-bold text-gray-400 uppercase mb-2 block flex items-center gap-1">
-                          <Type size={14}/>
+                          <Type size={14} />
                           フォント
                         </label>
                         <div className="flex bg-gray-100 rounded-lg p-1">
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, fontFamily: 'serif'})} 
-                            className={`flex-1 py-2 rounded-md text-sm transition-all ${
-                              readerSettings.fontFamily === 'serif' ? 'bg-white shadow-sm font-serif' : ''
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontFamily: 'serif' })}
+                            className={`flex-1 py-2 rounded-md text-sm transition-all ${readerSettings.fontFamily === 'serif' ? 'bg-white shadow-sm font-serif' : ''
+                              }`}
                           >
                             明朝体
                           </button>
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, fontFamily: 'sans'})} 
-                            className={`flex-1 py-2 rounded-md text-sm transition-all ${
-                              readerSettings.fontFamily === 'sans' ? 'bg-white shadow-sm font-sans' : ''
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontFamily: 'sans' })}
+                            className={`flex-1 py-2 rounded-md text-sm transition-all ${readerSettings.fontFamily === 'sans' ? 'bg-white shadow-sm font-sans' : ''
+                              }`}
                           >
                             ゴシック体
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* 文字サイズ設定 */}
                       <div>
                         <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">文字サイズ</label>
                         <div className="flex bg-gray-100 rounded-lg p-1">
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, fontSize: 'small'})} 
-                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${
-                              readerSettings.fontSize === 'small' ? 'bg-white shadow-sm' : ''
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: 'small' })}
+                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${readerSettings.fontSize === 'small' ? 'bg-white shadow-sm' : ''
+                              }`}
                           >
-                            <Minus size={14}/>
+                            <Minus size={14} />
                             <span className="text-xs">小</span>
                           </button>
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, fontSize: 'medium'})} 
-                            className={`flex-1 py-2 rounded-md text-sm transition-all ${
-                              readerSettings.fontSize === 'medium' ? 'bg-white shadow-sm' : ''
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: 'medium' })}
+                            className={`flex-1 py-2 rounded-md text-sm transition-all ${readerSettings.fontSize === 'medium' ? 'bg-white shadow-sm' : ''
+                              }`}
                           >
                             <span className="text-xs">中</span>
                           </button>
-                          <button 
-                            onClick={() => setReaderSettings({...readerSettings, fontSize: 'large'})} 
-                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${
-                              readerSettings.fontSize === 'large' ? 'bg-white shadow-sm' : ''
-                            }`}
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: 'large' })}
+                            className={`flex-1 py-2 rounded-md text-sm flex items-center justify-center gap-1 transition-all ${readerSettings.fontSize === 'large' ? 'bg-white shadow-sm' : ''
+                              }`}
                           >
-                            <Maximize size={14}/>
+                            <Maximize size={14} />
                             <span className="text-xs">大</span>
                           </button>
                         </div>
@@ -532,7 +545,7 @@ export default function Tsunovel() {
                   {novels.find(n => n.id === currentNovelId)?.title}
                 </h1>
                 <p className="text-sm opacity-60">
-                   著者: {novels.find(n => n.id === currentNovelId)?.author}
+                  著者: {novels.find(n => n.id === currentNovelId)?.author}
                 </p>
               </div>
               <div className="whitespace-pre-wrap text-justify leading-[2.0]">
@@ -550,11 +563,11 @@ export default function Tsunovel() {
 
       {/* --- Add / Search Modal --- */}
       {isAddModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
           onClick={() => setIsAddModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -562,12 +575,12 @@ export default function Tsunovel() {
               <h3 className="font-bold text-gray-800 flex items-center gap-2">
                 {addMode === 'search' ? (
                   <>
-                    <Search size={18} className="text-indigo-600"/>
+                    <Search size={18} className="text-indigo-600" />
                     小説を検索
                   </>
                 ) : (
                   <>
-                    <Link size={18} className="text-indigo-600"/>
+                    <Link size={18} className="text-indigo-600" />
                     URLから追加
                   </>
                 )}
@@ -586,11 +599,10 @@ export default function Tsunovel() {
                   setSearchQuery('');
                   setSearchResults([]);
                 }}
-                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-                  addMode === 'search'
+                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${addMode === 'search'
                     ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
-                }`}
+                  }`}
               >
                 <Search size={16} className="inline mr-2" />
                 検索
@@ -601,59 +613,58 @@ export default function Tsunovel() {
                   setSearchQuery('');
                   setSearchResults([]);
                 }}
-                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-                  addMode === 'url'
+                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${addMode === 'url'
                     ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
-                }`}
+                  }`}
               >
                 <Link size={16} className="inline mr-2" />
                 URL
               </button>
             </div>
-            
+
             <div className="p-4 overflow-y-auto flex-1 bg-white">
               {addMode === 'search' ? (
                 <>
                   <div className="relative mb-6">
-                    <input 
-                      type="text" 
-                      placeholder="キーワードを入力..." 
+                    <input
+                      type="text"
+                      placeholder="キーワードを入力..."
                       className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50 text-gray-900 placeholder:text-gray-400"
                       value={searchQuery}
                       onChange={(e) => handleSearch(e.target.value)}
                       autoFocus
                     />
-                    <Search className="absolute left-3 top-3.5 text-gray-400" size={18}/>
+                    <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
                   </div>
-                  
+
                   {searchQuery && searchResults.length === 0 && (
                     <div className="text-center text-gray-400 py-8">
                       検索結果が見つかりませんでした
                     </div>
                   )}
-                  
+
                   {searchResults.length > 0 && (
-                     <div className="space-y-3">
-                        {searchResults.map((item, idx) => (
-                          <div 
-                            key={idx} 
-                            onClick={() => addFromSearch(item)} 
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer group border border-transparent hover:border-gray-200 transition-all"
-                          >
-                             <div 
-                               className="w-10 h-14 bg-gray-200 rounded flex-shrink-0 bg-cover bg-center shadow-sm" 
-                               style={{backgroundImage: `url(https://picsum.photos/seed/${idx + 100}/100/150)`}}
-                             ></div>
-                             <div className="flex-1 min-w-0">
-                               <h4 className="font-bold text-gray-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{item.title}</h4>
-                               <p className="text-xs text-gray-500 mt-1">{item.author}</p>
-                               <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.desc}</p>
-                             </div>
-                             <Plus size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0"/>
+                    <div className="space-y-3">
+                      {searchResults.map((item, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => addFromSearch(item)}
+                          className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer group border border-transparent hover:border-gray-200 transition-all"
+                        >
+                          <div
+                            className="w-10 h-14 bg-gray-200 rounded flex-shrink-0 bg-cover bg-center shadow-sm"
+                            style={{ backgroundImage: `url(https://picsum.photos/seed/${idx + 100}/100/150)` }}
+                          ></div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-gray-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{item.title}</h4>
+                            <p className="text-xs text-gray-500 mt-1">{item.author}</p>
+                            <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.desc}</p>
                           </div>
-                        ))}
-                     </div>
+                          <Plus size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </>
               ) : (
@@ -663,9 +674,9 @@ export default function Tsunovel() {
                       小説のURLを入力
                     </label>
                     <div className="relative">
-                      <input 
-                        type="url" 
-                        placeholder="https://ncode.syosetu.com/..." 
+                      <input
+                        type="url"
+                        placeholder="https://ncode.syosetu.com/..."
                         className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none bg-gray-50 text-gray-900 placeholder:text-gray-400 disabled:bg-gray-100 disabled:text-gray-500"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
@@ -673,24 +684,35 @@ export default function Tsunovel() {
                         disabled={isDownloading}
                         autoFocus
                       />
-                      <Link className="absolute left-3 top-3.5 text-gray-400" size={18}/>
+                      <Link className="absolute left-3 top-3.5 text-gray-400" size={18} />
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      対応サイト: 小説家になろう、カクヨム、その他のWeb小説サイト
+                      対応サイト: 小説家になろう (GitHub Actionsプロキシ経由)
                     </p>
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">GitHub PAT (個人アクセストークン)</label>
+                      <input
+                        type="password"
+                        placeholder="ghp_..."
+                        className="w-full px-3 py-2 text-xs rounded border border-gray-200 focus:border-indigo-500 outline-none"
+                        value={githubConfig.pat}
+                        onChange={(e) => setGithubConfig({ ...githubConfig, pat: e.target.value })}
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        ※ `repo` 権限が必要です。トークンはブラウザのメモリ上のみに保持されます。
+                      </p>
+                    </div>
                   </div>
 
                   {downloadProgress && (
-                    <div className={`mb-4 p-3 rounded-lg border ${
-                      downloadProgress.startsWith('エラー:') 
-                        ? 'bg-red-50 border-red-200' 
+                    <div className={`mb-4 p-3 rounded-lg border ${downloadProgress.startsWith('エラー:')
+                        ? 'bg-red-50 border-red-200'
                         : 'bg-blue-50 border-blue-200'
-                    }`}>
-                      <div className={`flex items-center gap-2 text-sm ${
-                        downloadProgress.startsWith('エラー:') 
-                          ? 'text-red-700' 
-                          : 'text-blue-700'
                       }`}>
+                      <div className={`flex items-center gap-2 text-sm ${downloadProgress.startsWith('エラー:')
+                          ? 'text-red-700'
+                          : 'text-blue-700'
+                        }`}>
                         {isDownloading && !downloadProgress.startsWith('エラー:') && (
                           <Loader size={16} className="animate-spin" />
                         )}
