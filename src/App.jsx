@@ -21,7 +21,8 @@ import {
   Menu,
   Bookmark,
   MousePointer2,
-  List
+  List,
+  Home
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode } from './utils/novelFetcher';
 import { triggerFetch, pollData, fetchIndex } from './utils/githubActions';
@@ -501,7 +502,7 @@ export default function Tsunovel() {
           <header className="bg-[#1e1915] text-[#d7ccc8] shadow-2xl sticky top-0 z-30 border-b border-[#3e2723]">
             <div className="max-w-6xl mx-auto px-6">
               <div className="flex flex-col items-center py-12">
-                <img src="pict/title.png" alt="" className="h-48 md:h-72 w-auto mb-4" />
+                <img src="/pict/title.png" alt="" className="h-48 md:h-72 w-auto mb-4" />
               </div>
               <div className="absolute top-4 right-4 flex items-center gap-2">
                 <button
