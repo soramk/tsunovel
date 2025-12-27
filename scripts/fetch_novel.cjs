@@ -10,11 +10,12 @@ const zlib = require('zlib');
  * - 前書き・本文・後書きを正しく分離して取得
  */
 async function fetchNovel() {
-    const ncode = process.env.NCODE;
-    if (!ncode) {
+    const ncodeRaw = process.env.NCODE;
+    if (!ncodeRaw) {
         console.error('Error: NCODE environment variable is not set.');
         process.exit(1);
     }
+    const ncode = ncodeRaw.toLowerCase();
 
     // ブラウザに近いUser-Agentに設定
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';

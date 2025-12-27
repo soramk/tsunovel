@@ -65,6 +65,8 @@ export default function Tsunovel() {
   const [urlInput, setUrlInput] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState('');
+  const [isPrepending, setIsPrepending] = useState(false);
+  const scrollRef = useRef({ height: 0, top: 0 });
   const [githubConfig, setGithubConfig] = useState(() => {
     const saved = localStorage.getItem('tsunovel_github_config');
     return saved ? JSON.parse(saved) : {
@@ -194,13 +196,12 @@ export default function Tsunovel() {
   /**
    * 特定の話数を読み込む
    */
-  const loadChapter = async (novelId, chapterNum, isAppend = false) => {
+  const loadChapter = async (novelId, chapterNum, mode = 'replace') => {
     const novel = novels.find(n => n.id === novelId);
     if (!novel) return;
 
-    if (!isAppend) {
+    if (mode === 'replace') {
       setIsLoadingChapter(true);
-      // 一旦チャプターリストをクリア（読み込み中表示のため）
       setReaderChapters([]);
     }
 
@@ -256,12 +257,15 @@ export default function Tsunovel() {
         title: title
       };
 
-      if (isAppend) {
+      if (mode === 'append') {
         setReaderChapters(prev => [...prev, newChapter]);
+      } else if (mode === 'prepend') {
+        scrollRef.current = { height: document.documentElement.scrollHeight, top: window.scrollY };
+        setIsPrepending(true);
+        setReaderChapters(prev => [newChapter, ...prev]);
       } else {
         setReaderChapters([newChapter]);
         setCurrentChapter(chapterNum);
-        // 通常のロード時はトップにスクロール
         window.scrollTo(0, 0);
       }
 
@@ -278,7 +282,7 @@ export default function Tsunovel() {
     } catch (error) {
       console.error('Error loading chapter:', error);
     } finally {
-      if (!isAppend) setIsLoadingChapter(false);
+      if (mode === 'replace') setIsLoadingChapter(false);
     }
   };
 
@@ -334,17 +338,14 @@ export default function Tsunovel() {
     // 現在のチャプターをインクリメントして、単体ロード（または末尾追加）を行う
     const nextNum = currentChapter + 1;
 
-    if (nextNum <= novel.info.general_all_no) {
-      // ボタンクリック時は常に「遷移先」としてロードしたいので isAppend=false にする
-      // （または、スクロールモードで「続きから読んでいる」感覚を出すなら true でも良いが
-      // ユーザーが「反応しない」と言っているのは、画面が変わらないことへの不満と思われる）
-      loadChapter(currentNovelId, nextNum, false);
+    if (nextNum <= (novel.info?.general_all_no || 0)) {
+      loadChapter(currentNovelId, nextNum, 'replace');
     }
   };
 
   const prevChapter = () => {
     if (currentChapter > 1) {
-      loadChapter(currentNovelId, currentChapter - 1);
+      loadChapter(currentNovelId, currentChapter - 1, 'replace');
     }
   };
 
@@ -517,6 +518,18 @@ export default function Tsunovel() {
   const [isTocOpen, setIsTocOpen] = useState(false);
   const currentNovel = novels.find(n => n.id === currentNovelId);
 
+  // スクロール位置の調整（前章 prepend 時）
+  useEffect(() => {
+    if (isPrepending && readerChapters.length > 0) {
+      const newHeight = document.documentElement.scrollHeight;
+      const heightDiff = newHeight - scrollRef.current.height;
+      if (heightDiff > 0) {
+        window.scrollTo(0, scrollRef.current.top + heightDiff);
+      }
+      setIsPrepending(false);
+    }
+  }, [readerChapters, isPrepending]);
+
   // スクロール検知：最下部到達で次章読み込み ＆ 現在表示中の章を特定
   useEffect(() => {
     if (viewMode !== 'reader') return;
@@ -538,7 +551,21 @@ export default function Tsunovel() {
             // 重複読み込み防止のため簡易的なチェック
             const isAlreadyLoadingNext = readerChapters.some(c => c.chapterNum === lastLoadedChapter + 1);
             if (!isAlreadyLoadingNext) {
-              nextChapter();
+              loadChapter(currentNovelId, lastLoadedChapter + 1, 'append');
+            }
+          }
+        }
+
+        // 1.5. 最上部到達検知（スクロールモード時：前章読み込み）
+        if (scrollTop < 50) {
+          const firstLoadedChapter = readerChapters.length > 0
+            ? readerChapters[0].chapterNum
+            : currentChapter;
+
+          if (!isLoadingChapter && currentNovel && firstLoadedChapter > 1) {
+            const isAlreadyLoadingPrev = readerChapters.some(c => c.chapterNum === firstLoadedChapter - 1);
+            if (!isAlreadyLoadingPrev) {
+              loadChapter(currentNovelId, firstLoadedChapter - 1, 'prepend');
             }
           }
         }

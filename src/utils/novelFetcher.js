@@ -152,7 +152,7 @@ export async function searchNarou(word, limit = 10) {
         title: item.title,
         author: item.writer,
         desc: item.story,
-        ncode: item.ncode,
+        ncode: item.ncode.toLowerCase(),
         site: '小説家になろう'
       }));
 
