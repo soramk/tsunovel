@@ -33,9 +33,14 @@ async function fetchNovel() {
             console.error('Failed to parse JSON response. Response was:', response);
             throw new Error(`JSON parse error: ${e.message}`);
         }
-        if (!jsonData || jsonData.length === 0) {
-            throw new Error('Novel data not found or invalid response.');
+
+        if (!jsonData || jsonData.length < 2) {
+            console.error('API Response Structure:', jsonData);
+            throw new Error('Novel data not found in response (array length < 2).');
         }
+
+        // 最初の要素は {allcount: n} なので、2番目の要素を取得
+        const novelInfo = jsonData[1];
 
         const dirPath = path.join('docs', ncode);
         if (!fs.existsSync(dirPath)) {
@@ -43,7 +48,7 @@ async function fetchNovel() {
         }
 
         const filePath = path.join(dirPath, 'info.json');
-        fs.writeFileSync(filePath, JSON.stringify(jsonData[0], null, 2));
+        fs.writeFileSync(filePath, JSON.stringify(novelInfo, null, 2));
 
         console.log(`Successfully saved novel data to ${filePath}`);
     } catch (error) {
