@@ -105,6 +105,7 @@ export default function Tsunovel() {
   }, [readerSettings]);
 
   const [currentChapter, setCurrentChapter] = useState(1);
+  const [readerChapters, setReaderChapters] = useState([]); // [{ chapterNum, content, title }]
   const [isLoadingChapter, setIsLoadingChapter] = useState(false);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -172,14 +173,9 @@ export default function Tsunovel() {
     const novel = novels.find(n => n.id === novelId);
     const startChapter = bookmarks[novelId] || 1;
 
-    // コンテンツが未取得の場合は取得する
-    if (novel && (!novel.content || currentChapter !== startChapter)) {
-      setOpeningBookId(novelId);
-      await loadChapter(novelId, startChapter);
-    } else {
-      setOpeningBookId(novelId);
-      setCurrentChapter(startChapter);
-    }
+    // 常に指定された話数（またはしおり）からロードして readerChapters を初期化する
+    setOpeningBookId(novelId);
+    await loadChapter(novelId, startChapter);
 
     // 1.5秒後に画面遷移
     setTimeout(() => {
@@ -196,11 +192,16 @@ export default function Tsunovel() {
   /**
    * 特定の話数を読み込む
    */
-  const loadChapter = async (novelId, chapterNum) => {
+  const loadChapter = async (novelId, chapterNum, isAppend = false) => {
     const novel = novels.find(n => n.id === novelId);
     if (!novel) return;
 
-    setIsLoadingChapter(true);
+    if (!isAppend) {
+      setIsLoadingChapter(true);
+      // 一旦チャプターリストをクリア（読み込み中表示のため）
+      setReaderChapters([]);
+    }
+
     try {
       // GitHub API 経由での取得
       const ncodeLower = novel.ncode.toLowerCase();
@@ -240,30 +241,57 @@ export default function Tsunovel() {
         }
       }
 
+      // 章タイトルの抽出（コンテンツの最初の行が「■ 」で始まっている場合）
+      let title = `Chapter ${chapterNum}`;
+      if (novelContent.startsWith('■ ')) {
+        const firstLine = novelContent.split('\n')[0];
+        title = firstLine.replace('■ ', '');
+      }
+
+      const newChapter = {
+        chapterNum,
+        content: novelContent || (chapterNum === 1 ? (infoData?.story ? `【あらすじ】\n\n${infoData.story}` : '本文を取得できませんでした。') : '指定された話数はまだ取得されていません。'),
+        title: title
+      };
+
+      if (isAppend) {
+        setReaderChapters(prev => [...prev, newChapter]);
+      } else {
+        setReaderChapters([newChapter]);
+        setCurrentChapter(chapterNum);
+        // 通常のロード時はトップにスクロール
+        window.scrollTo(0, 0);
+      }
+
       setNovels(prev => prev.map(n =>
         n.id === novelId ? {
           ...n,
-          content: novelContent || (chapterNum === 1 ? (infoData?.story ? `【あらすじ】\n\n${infoData.story}` : '本文を取得できませんでした。') : '指定された話数はまだ取得されていません。'),
           info: infoData
         } : n
       ));
-      setCurrentChapter(chapterNum);
+
       // しおりを更新
       setBookmarks(prev => ({ ...prev, [novelId]: chapterNum }));
 
-      // スクロールをトップに戻す
-      window.scrollTo(0, 0);
     } catch (error) {
       console.error('Error loading chapter:', error);
     } finally {
-      setIsLoadingChapter(false);
+      if (!isAppend) setIsLoadingChapter(false);
     }
   };
 
   const nextChapter = () => {
     const novel = novels.find(n => n.id === currentNovelId);
-    if (novel && novel.info && currentChapter < novel.info.general_all_no) {
-      loadChapter(currentNovelId, currentChapter + 1);
+    if (!novel || !novel.info) return;
+
+    // 現在表示されている最後の章を取得
+    const lastLoadedChapter = readerChapters.length > 0
+      ? readerChapters[readerChapters.length - 1].chapterNum
+      : currentChapter;
+
+    if (lastLoadedChapter < novel.info.general_all_no) {
+      const isScrollMode = readerSettings.transitionMode === 'scroll';
+      loadChapter(currentNovelId, lastLoadedChapter + 1, isScrollMode);
     }
   };
 
@@ -413,27 +441,56 @@ export default function Tsunovel() {
   const [isTocOpen, setIsTocOpen] = useState(false);
   const currentNovel = novels.find(n => n.id === currentNovelId);
 
-  // スクロール検知
+  // スクロール検知：最下部到達で次章読み込み ＆ 現在表示中の章を特定
   useEffect(() => {
-    if (viewMode !== 'reader' || readerSettings.transitionMode !== 'scroll') return;
+    if (viewMode !== 'reader') return;
 
     const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight;
-      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-      const clientHeight = document.documentElement.clientHeight;
+      // 1. 最下部到達検知（スクロールモード時）
+      if (readerSettings.transitionMode === 'scroll') {
+        const scrollHeight = document.documentElement.scrollHeight;
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const clientHeight = document.documentElement.clientHeight;
 
-      // 短いページの場合または最下部に到達した場合
-      // scrollTop > 0 を条件に加えることで、初期表示時の誤爆を防ぐ
-      if (scrollTop > 0 && scrollTop + clientHeight >= scrollHeight - 30) {
-        if (!isLoadingChapter && currentNovel && currentChapter < currentNovel.info?.general_all_no) {
-          nextChapter();
+        if (scrollTop > 0 && scrollTop + clientHeight >= scrollHeight - 300) {
+          // 連続読みのため、現在読み込み済みの最後の章の次を読み込む
+          const lastLoadedChapter = readerChapters.length > 0
+            ? readerChapters[readerChapters.length - 1].chapterNum
+            : currentChapter;
+
+          if (!isLoadingChapter && currentNovel && lastLoadedChapter < currentNovel.info?.general_all_no) {
+            // 重複読み込み防止のため簡易的なチェック
+            const isAlreadyLoadingNext = readerChapters.some(c => c.chapterNum === lastLoadedChapter + 1);
+            if (!isAlreadyLoadingNext) {
+              nextChapter();
+            }
+          }
+        }
+      }
+
+      // 2. 現在表示中の章（画面中央付近にある章）の特定としおり更新
+      const chapterSections = document.querySelectorAll('.reader-chapter-section');
+      let currentVisibleChapter = currentChapter;
+
+      chapterSections.forEach(section => {
+        const rect = section.getBoundingClientRect();
+        // 画面の上部 1/3 付近にあるセクションを「現在読んでいる」とみなす
+        if (rect.top < window.innerHeight / 3 && rect.bottom > window.innerHeight / 3) {
+          currentVisibleChapter = parseInt(section.dataset.chapter);
+        }
+      });
+
+      if (currentVisibleChapter !== currentChapter) {
+        setCurrentChapter(currentVisibleChapter);
+        if (currentNovelId) {
+          setBookmarks(prev => ({ ...prev, [currentNovelId]: currentVisibleChapter }));
         }
       }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [viewMode, readerSettings.transitionMode, isLoadingChapter, currentNovel, currentChapter]);
+  }, [viewMode, readerSettings.transitionMode, isLoadingChapter, currentNovel, currentChapter, readerChapters]);
 
   return (
     <div className="min-h-screen bg-[#2c241b] text-gray-100 font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden">
@@ -938,14 +995,40 @@ export default function Tsunovel() {
                 </p>
               </div>
 
-              {isLoadingChapter ? (
+              {isLoadingChapter && readerChapters.length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
                   <Loader className="animate-spin" />
                   <p>読み込み中...</p>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap text-justify">
-                  {novels.find(n => n.id === currentNovelId)?.content}
+                <div className="space-y-16">
+                  {readerChapters.map((chapter, idx) => (
+                    <article
+                      key={`${chapter.chapterNum}-${idx}`}
+                      className="reader-chapter-section"
+                      data-chapter={chapter.chapterNum}
+                    >
+                      {/* 章の境界線（2つ目以降の章のみ表示） */}
+                      {idx > 0 && (
+                        <div className="flex items-center gap-4 mb-16 opacity-30">
+                          <div className="h-[1px] flex-1 bg-current"></div>
+                          <span className="text-[10px] font-bold tracking-widest uppercase">Chapter {chapter.chapterNum}</span>
+                          <div className="h-[1px] flex-1 bg-current"></div>
+                        </div>
+                      )}
+
+                      <div className="whitespace-pre-wrap text-justify">
+                        {chapter.content}
+                      </div>
+                    </article>
+                  ))}
+
+                  {isLoadingChapter && (
+                    <div className="py-10 flex items-center justify-center gap-3 opacity-30 text-sm italic">
+                      <Loader className="animate-spin" size={16} />
+                      <span>次の話を読み込み中...</span>
+                    </div>
+                  )}
                 </div>
               )}
 
