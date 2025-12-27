@@ -84,6 +84,7 @@ export default function Tsunovel() {
   // 初期読み込み: storage/index.json から小説一覧を取得
   useEffect(() => {
     const loadIndex = async () => {
+      console.log('Refreshing library index...');
       const index = await fetchIndex(githubConfig);
       if (index && index.length > 0) {
         const loadedNovels = index.map(item => ({
@@ -97,10 +98,14 @@ export default function Tsunovel() {
           content: null // 後で取得
         }));
         setNovels(loadedNovels);
+      } else {
+        console.log('No novels found or fetch failed.');
+        setNovels([]); // 失敗時はクリア
       }
     };
     loadIndex();
-  }, [githubConfig.owner, githubConfig.repo]); // owner/repoが変更されたら再取得
+  }, [githubConfig.owner, githubConfig.repo, githubConfig.pat]); // PATの変更も検知
+  pieces
 
   // 設定パネルの外側クリックで閉じる
   useEffect(() => {

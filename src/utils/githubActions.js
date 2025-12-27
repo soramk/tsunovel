@@ -107,10 +107,14 @@ export async function fetchIndex(config) {
                 console.error('Failed to parse index JSON:', e);
                 return [];
             }
+        } else {
+            console.error(`Fetch Index Error: ${response.status} ${response.statusText}`);
+            if (response.status === 401) console.error('Check if your PAT is valid.');
+            if (response.status === 404) console.error('storage/index.json not found in the repository.');
+            return [];
         }
-        return [];
     } catch (error) {
-        console.error('Error fetching index:', error);
+        console.error('Network Error fetching index:', error);
         return [];
     }
 }
