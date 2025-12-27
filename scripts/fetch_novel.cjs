@@ -4,9 +4,10 @@ const https = require('https');
 const zlib = require('zlib');
 
 /**
- * なろう小説取得スクリプト v2
+ * なろう小説取得スクリプト v2.1
  * - APIでメタデータを取得
  * - HTMLスクレイピングで本文を取得 (gzip対応, Browser-like UA)
+ * - 前書き・本文・後書きを正しく分離して取得
  */
 async function fetchNovel() {
     const ncode = process.env.NCODE;
@@ -51,7 +52,6 @@ async function fetchNovel() {
         const chaptersPath = path.join(dirPath, 'chapters');
         if (!fs.existsSync(chaptersPath)) fs.mkdirSync(chaptersPath, { recursive: true });
 
-        // なろうAPIのフィールド名修正: novel_type, general_all_no
         const totalChapters = novelInfo.novel_type === 2 ? 1 : (novelInfo.general_all_no || 1);
         console.log(`Total episodes target: ${totalChapters}`);
 
@@ -71,7 +71,9 @@ async function fetchNovel() {
                     'Accept-Encoding': 'gzip, deflate'
                 });
 
-                // タイトル抽出
+                // --- 抽出ロジック開始 ---
+
+                // 1. タイトル抽出
                 const titlePatterns = [
                     /<h1 class="[^"]*p-novel__title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i,
                     /<p class="novel_subtitle"[^>]*>([\s\S]*?)<\/p>/i
@@ -85,49 +87,69 @@ async function fetchNovel() {
                     }
                 }
 
-                // 各セクションの抽出
-                const sections = [
-                    { name: 'Preface', patterns: [/<div[^>]+p-novel__text--preface[^>]*>([\s\S]*?)<\/div>/i, /<div id="novel_p"[^>]*>([\s\S]*?)<\/div>/i] },
-                    { name: 'Body', patterns: [/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i, /<div class="[^"]*p-novel__body[^"]*"[^>]*>([\s\S]*?)<\/div>/i, /<div[^>]+js-novel-text[^>]*>([\s\S]*?)<\/div>/i] },
-                    { name: 'Afterword', patterns: [/<div[^>]+p-novel__text--afterword[^>]*>([\s\S]*?)<\/div>/i, /<div id="novel_a"[^>]*>([\s\S]*?)<\/div>/i] }
-                ];
+                // 2. 各セクションの抽出
+                const textBlocks = {
+                    preface: "",
+                    body: "",
+                    afterword: ""
+                };
 
-                let combinedContent = "";
-                if (chapterTitle) {
-                    combinedContent += `■ ${chapterTitle}\n\n`;
+                // 新レイアウト (.p-novel__text) の抽出
+                const blockRegex = /<div[^>]+class="[^"]*p-novel__text[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+                let m;
+                while ((m = blockRegex.exec(html)) !== null) {
+                    const tag = m[0];
+                    const content = m[1];
+                    if (tag.includes('p-novel__text--preface')) {
+                        textBlocks.preface += content + "\n";
+                    } else if (tag.includes('p-novel__text--afterword')) {
+                        textBlocks.afterword += content + "\n";
+                    } else {
+                        // モディファイアなしは本文
+                        textBlocks.body += content + "\n";
+                    }
                 }
 
-                let foundAny = false;
-                for (const section of sections) {
-                    let sectionContent = "";
-                    for (const pattern of section.patterns) {
-                        const match = html.match(pattern);
-                        // 本文(Body)の場合は、クラス名によるマッチング時に preface/afterword を含まないものを優先したいが、
-                        // 現状の regex では最初に見つかったものを採用する。
-                        // 新レイアウトでは .p-novel__body の中に .p-novel__text が複数ある場合がある。
-                        if (match && match[1]) {
-                            // 抽出したHTMLからタグを除去してテキスト化
-                            let text = match[1]
-                                .replace(/<p id="L[pa]?\d+">/g, '')
-                                .replace(/<\/p>/g, '\n')
-                                .replace(/<br\s*\/?>/g, '\n')
-                                .replace(/&lt;/g, '<')
-                                .replace(/&gt;/g, '>')
-                                .replace(/&amp;/g, '&')
-                                .replace(/&quot;/g, '"')
-                                .replace(/&#39;/g, "'")
-                                .replace(/<[^>]*>/g, '')
-                                .trim();
+                // 旧レイアウト (IDベース) の抽出 (見つからなかった場合の補完)
+                if (!textBlocks.preface) {
+                    const legacy = html.match(/<div id="novel_p"[^>]*>([\s\S]*?)<\/div>/i);
+                    if (legacy) textBlocks.preface = legacy[1];
+                }
+                if (!textBlocks.body) {
+                    const legacy = html.match(/<div id="novel_honbun"[^>]*>([\s\S]*?)<\/div>/i);
+                    if (legacy) textBlocks.body = legacy[1];
+                }
+                if (!textBlocks.afterword) {
+                    const legacy = html.match(/<div id="novel_a"[^>]*>([\s\S]*?)<\/div>/i);
+                    if (legacy) textBlocks.afterword = legacy[1];
+                }
 
-                            if (text) {
-                                sectionContent = text;
-                                break;
-                            }
+                // 3. コンテンツの結合とクリーンアップ
+                let combinedContent = "";
+                if (chapterTitle) combinedContent += `■ ${chapterTitle}\n\n`;
+
+                const sections = ['preface', 'body', 'afterword'];
+                let foundAny = false;
+
+                for (const section of sections) {
+                    let raw = textBlocks[section];
+                    if (raw) {
+                        let text = raw
+                            .replace(/<p id="L[pa]?\d+">/g, '')
+                            .replace(/<\/p>/g, '\n')
+                            .replace(/<br\s*\/?>/g, '\n')
+                            .replace(/&lt;/g, '<')
+                            .replace(/&gt;/g, '>')
+                            .replace(/&amp;/g, '&')
+                            .replace(/&quot;/g, '"')
+                            .replace(/&#39;/g, "'")
+                            .replace(/<[^>]*>/g, '')
+                            .trim();
+
+                        if (text) {
+                            combinedContent += text + "\n\n";
+                            foundAny = true;
                         }
-                    }
-                    if (sectionContent) {
-                        combinedContent += sectionContent + "\n\n";
-                        foundAny = true;
                     }
                 }
 
@@ -140,9 +162,11 @@ async function fetchNovel() {
                     console.error(`[${i}/${totalChapters}] FAILED to find any content sections.`);
                     console.log('HTML Snippet (first 500 chars):', html.substring(0, 500));
                 }
+                // --- 抽出ロジック終了 ---
+
             } catch (err) {
                 console.error(`[${i}/${totalChapters}] HTTP Error:`, err.message);
-                if (i === 1) throw err; // 1話目がダメなら終了
+                if (i === 1) throw err;
             }
 
             // 負荷軽減
