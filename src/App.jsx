@@ -836,7 +836,7 @@ export default function Tsunovel() {
                 <Settings size={20} />
               </button>
               {isSettingsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-30 transition-all animate-in zoom-in-95 duration-200">
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-30 transition-all animate-in zoom-in-95 duration-200">
                   <div className="space-y-6">
                     {/* テーマ設定 */}
                     <div>
