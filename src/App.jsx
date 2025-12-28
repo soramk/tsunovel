@@ -739,33 +739,38 @@ export default function Tsunovel() {
             {/* 背景のグロウ装飾 */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(100,149,237,0.1),transparent_70%)] pointer-events-none"></div>
 
-            <div className="max-w-6xl mx-auto px-6 relative z-10">
-              <div className="flex flex-col items-center py-8 md:py-16">
+            <div className="max-w-6xl mx-auto px-6 relative z-10 flex flex-col">
+              {/* UIボタン用の行 - モバイルでは上部に配置し、重なりを回避 */}
+              <div className="flex justify-end pt-4 md:absolute md:top-6 md:right-6 md:pt-0">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <button
+                    onClick={() => setViewMode('settings')}
+                    className="p-2.5 text-[#d7ccc8] hover:bg-[#2c3e50] rounded-xl transition-all border border-transparent hover:border-blue-400/30 shadow-lg active:scale-95"
+                    title="設定"
+                  >
+                    <Settings size={22} />
+                  </button>
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="bg-gradient-to-br from-[#4b6584] to-[#2c3e50] hover:from-[#5d7a9b] hover:to-[#34495e] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-[0_4px_15px_rgba(0,0,0,0.3)] active:scale-95 border border-[#5d7a9b]/50 group"
+                  >
+                    <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                    <span className="hidden sm:inline">小説を追加</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ロゴ用の中心領域 */}
+              <div className="flex flex-col items-center py-10 md:py-20">
                 <div className="relative group">
                   {/* ロゴ背後の後光効果 */}
                   <div className="absolute inset-0 bg-blue-400/20 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
                   <img
                     src={`${import.meta.env.BASE_URL}pict/title.png`}
                     alt="Tsunovel Logo"
-                    className="h-28 sm:h-40 md:h-64 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] relative z-10 transition-transform duration-700 hover:scale-105"
+                    className="h-48 md:h-72 w-auto drop-shadow-[0_0_25px_rgba(0,0,0,0.9)] relative z-10 transition-transform duration-700 hover:scale-105"
                   />
                 </div>
-              </div>
-              <div className="absolute top-4 right-4 flex items-center gap-2 sm:gap-3">
-                <button
-                  onClick={() => setViewMode('settings')}
-                  className="p-2.5 text-[#d7ccc8] hover:bg-[#2c3e50] rounded-xl transition-all border border-transparent hover:border-blue-400/30 shadow-lg active:scale-95"
-                  title="設定"
-                >
-                  <Settings size={22} />
-                </button>
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="bg-gradient-to-br from-[#4b6584] to-[#2c3e50] hover:from-[#5d7a9b] hover:to-[#34495e] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-[0_4px_15px_rgba(0,0,0,0.3)] active:scale-95 border border-[#5d7a9b]/50 group"
-                >
-                  <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                  <span className="hidden sm:inline">小説を追加</span>
-                </button>
               </div>
             </div>
           </header>
