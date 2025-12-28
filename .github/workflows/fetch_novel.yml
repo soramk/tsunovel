@@ -25,6 +25,8 @@ jobs:
       - name: Fetch Data from Narou API
         env:
           NCODE: ${{ github.event.client_payload.ncode }}
+          FETCH_TYPE: ${{ github.event.client_payload.type || 'full' }}
+          EPISODES: ${{ github.event.client_payload.episodes || '' }}
         run: node scripts/fetch_novel.cjs
 
       - name: Commit & Push

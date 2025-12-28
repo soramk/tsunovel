@@ -5,7 +5,7 @@
 /**
  * GitHubのリポジトリにrepository_dispatchイベントを送信する
  */
-export async function triggerFetch(ncode, config) {
+export async function triggerFetch(ncode, config, type = 'full', episodes = '') {
     const { owner, repo, pat } = config;
     const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
 
@@ -18,7 +18,11 @@ export async function triggerFetch(ncode, config) {
         },
         body: JSON.stringify({
             event_type: 'fetch-novel',
-            client_payload: { ncode }
+            client_payload: {
+                ncode,
+                type,
+                episodes
+            }
         })
     });
 

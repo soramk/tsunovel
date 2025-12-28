@@ -57,6 +57,9 @@ export default function Tsunovel() {
 
   // アニメーション制御用ステート
   const [openingBookId, setOpeningBookId] = useState(null);
+  const [selectedNovelId, setSelectedNovelId] = useState(null); // 詳細モーダル用
+  const [isUpdateOptionsOpen, setIsUpdateOptionsOpen] = useState(false); // 更新オプション用
+  const [updateEpisodesInput, setUpdateEpisodesInput] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -197,15 +200,21 @@ export default function Tsunovel() {
   /**
    * 特定の話数を読み込む
    */
-  const loadChapter = async (novelId, chapterNum, mode = 'replace') => {
+  const loadChapter = async (novelId, chapterNum, mode = 'replace', isPrefetch = false) => {
     const novel = novels.find(n => n.id === novelId);
     if (!novel) return;
 
     // 重複読み込み防止 (Setを使用)
     if (loadingChapters.has(chapterNum)) return;
-    setLoadingChapters(prev => new Set(prev).add(chapterNum));
 
-    if (mode === 'replace') {
+    // スクロールモードで既に読み込み済みの場合はスキップ（appendの場合のみ）
+    if (mode === 'append' && readerChapters.some(c => c.chapterNum === chapterNum)) return;
+
+    if (!isPrefetch) {
+      setLoadingChapters(prev => new Set(prev).add(chapterNum));
+    }
+
+    if (mode === 'replace' && !isPrefetch) {
       setIsLoadingChapter(true);
       setReaderChapters([]);
     }
@@ -237,6 +246,11 @@ export default function Tsunovel() {
         }
       }
 
+      if (!novelContent && !isPrefetch) {
+        // プリロードでない場合のみエラー表示
+        // もし取得できなかったら何もしない（またはエラー文を入れる）
+      }
+
       if (!infoData) {
         const infoRes = await fetch(infoUrl, fetchOptions);
         if (infoRes.ok) {
@@ -251,7 +265,7 @@ export default function Tsunovel() {
 
       // 章タイトルの抽出（コンテンツの最初の行が「■ 」で始まっている場合）
       let title = `Chapter ${chapterNum}`;
-      if (novelContent.startsWith('■ ')) {
+      if (novelContent && novelContent.startsWith('■ ')) {
         const firstLine = novelContent.split('\n')[0];
         title = firstLine.replace('■ ', '');
       }
@@ -262,12 +276,30 @@ export default function Tsunovel() {
         title: title
       };
 
+      if (isPrefetch) {
+        // プリロードの場合はステートに入れず、成功したことだけログに出すか、
+        // あるいは後で使いやすいようにしておく（現在は簡易的にログのみ、
+        // または `readerChapters` に入れるロジックが必要）
+        // スクロールモードなら既に追加されているはずなので、ここでは「何もしない」
+        // もしくはキャッシュ的な仕組みに入れる
+        console.log(`Prefetched chapter ${chapterNum}`);
+        return;
+      }
+
       if (mode === 'append') {
-        setReaderChapters(prev => [...prev, newChapter]);
+        setReaderChapters(prev => {
+          if (prev.some(c => c.chapterNum === chapterNum)) return prev;
+          return [...prev, newChapter];
+        });
       } else if (mode === 'prepend') {
-        scrollRef.current = { height: document.documentElement.scrollHeight, top: window.scrollY };
+        const currentHeight = document.documentElement.scrollHeight;
+        const currentTop = window.scrollY;
+        scrollRef.current = { height: currentHeight, top: currentTop };
         setIsPrepending(true);
-        setReaderChapters(prev => [newChapter, ...prev]);
+        setReaderChapters(prev => {
+          if (prev.some(c => c.chapterNum === chapterNum)) return prev;
+          return [newChapter, ...prev];
+        });
       } else {
         setReaderChapters([newChapter]);
         setCurrentChapter(chapterNum);
@@ -299,16 +331,17 @@ export default function Tsunovel() {
   /**
    * 小説の情報を最新に同期・更新する
    */
-  const handleSyncNovel = async (novelId) => {
+  const handleSyncNovel = async (novelId, type = 'full', episodes = '') => {
     const novel = novels.find(n => n.id === novelId);
     if (!novel) return;
 
     setIsDownloading(true);
     setDownloadProgress(`${novel.title} を更新中...`);
+    setIsUpdateOptionsOpen(false);
 
     try {
       // GitHub Actionsをトリガー
-      await triggerFetch(novel.ncode, githubConfig);
+      await triggerFetch(novel.ncode, githubConfig, type, episodes);
 
       setDownloadProgress('同期中... 完了まで最大1分かかります。');
 
@@ -609,6 +642,29 @@ export default function Tsunovel() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [viewMode, readerSettings.transitionMode, isLoadingChapter, currentNovel, currentChapter, readerChapters]);
 
+  // 次話プリロード機能 (読書中にバックグラウンドで取得)
+  useEffect(() => {
+    if (viewMode !== 'reader' || !currentNovelId || !currentChapter) return;
+
+    const novel = novels.find(n => n.id === currentNovelId);
+    if (!novel || !novel.info) return;
+
+    const nextChap = currentChapter + 1;
+    if (nextChap <= (novel.info.general_all_no || 0)) {
+      // 既にロード済み（readerChaptersにある）かチェック
+      const isLoaded = readerChapters.some(c => c.chapterNum === nextChap);
+      if (!isLoaded && !loadingChapters.has(nextChap)) {
+        console.log(`Prefetching chapter ${nextChap}...`);
+        // スクロールモードなら append、ボタンモードなら prefetch のみ
+        if (readerSettings.transitionMode === 'scroll') {
+          loadChapter(currentNovelId, nextChap, 'append');
+        } else {
+          loadChapter(currentNovelId, nextChap, 'replace', true);
+        }
+      }
+    }
+  }, [currentChapter, viewMode, currentNovelId, readerSettings.transitionMode]);
+
   return (
     <div className="min-h-screen bg-[#2c241b] text-gray-100 font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden">
 
@@ -671,150 +727,65 @@ export default function Tsunovel() {
                   <p className="text-xs">「小説を追加」から作品をダウンロードしてください</p>
                 </div>
               ) : (
-                <div className="flex flex-wrap justify-center -space-x-16 -space-y-12 px-4 pb-60 max-w-6xl mx-auto items-end pt-32">
+                <div className="flex flex-wrap justify-center gap-2 sm:gap-4 px-4 pb-60 max-w-6xl mx-auto items-end pt-32">
                   {novels.map((novel, index) => {
                     const isOpening = openingBookId === novel.id;
-                    const coverImage = `https://picsum.photos/seed/${novel.id + 200}/300/450`;
 
-                    // さらに大胆な「積読」感（大きな回転とオフセット）
-                    const seed = (novel.id % 40) / 40;
-                    const rotate = (seed * 30 - 15).toFixed(1); // -15deg to 15deg
-                    const translateX = (seed * 40 - 20).toFixed(1);
-                    const translateY = (seed * 60).toFixed(1);
+                    // 背表紙のデザイン（ランダムな色合い）
+                    const colors = [
+                      'bg-[#3e2e28]', 'bg-[#2d241e]', 'bg-[#4a3728]',
+                      'bg-[#5d4037]', 'bg-[#3e2723]', 'bg-[#263238]',
+                      'bg-[#1a237e]', 'bg-[#1b5e20]', 'bg-[#b71c1c]'
+                    ];
+                    const spineColor = colors[Math.abs(novel.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % colors.length];
 
                     return (
                       <div
                         key={novel.id}
-                        className={`relative group perspective-1500 ${isOpening ? 'z-50' : 'hover:z-40 z-10'}`}
-                        style={{
-                          transform: !isOpening ? `rotate(${rotate}deg) translate(${translateX}px, ${translateY}px)` : 'none',
-                          transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), z-index 0s',
-                          width: '200px'
-                        }}
+                        className={`relative group ${isOpening ? 'z-50' : 'hover:z-40 z-10'}`}
                       >
-
-                        {/* --- 3D BOOK STRUCTURE --- */}
+                        {/* --- SPINE ONLY VIEW --- */}
                         <div
-                          onClick={() => handleBookClick(novel.id)}
+                          onClick={() => setSelectedNovelId(novel.id)}
                           className={`
-                        relative w-full aspect-[2/3] cursor-pointer preserve-3d ease-in-out
-                        ${isOpening ? 'duration-[800ms]' : 'duration-300'}
-                         ${isOpening
-                              ? 'translate-z-[300px] -translate-y-[100px] scale-125 rotate-y-[-10deg]'
-                              : 'group-hover:translate-z-[180px] group-hover:-translate-y-[60px] group-hover:rotate-y-[-15deg]'
-                            }
-                      `}
-                          style={{ transformStyle: 'preserve-3d' }}
+                            relative w-10 sm:w-14 h-48 sm:h-64 cursor-pointer transition-all duration-300 transform
+                            ${spineColor} rounded shadow-lg border-l border-white/10 flex items-center justify-center
+                            hover:-translate-y-4 hover:brightness-110 active:scale-95
+                            ${isOpening ? 'opacity-0 scale-150' : 'opacity-100'}
+                          `}
                         >
-                          {/* 1. FRONT COVER (表紙) */}
-                          <div
-                            className={`
-                          absolute inset-0 rounded-r-sm rounded-l-sm shadow-2xl origin-left backface-hidden z-20
-                          transition-transform ease-in-out border border-white/10
-                          ${isOpening ? 'duration-[800ms] delay-[400ms] rotate-y-[-140deg]' : 'duration-300'}
-                        `}
-                            style={{
-                              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.1)), url(${coverImage})`,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              backgroundColor: '#3e2e28'
-                            }}
-                          >
-                            {/* 質感と影 */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/20 mix-blend-multiply rounded-sm"></div>
-                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-white/20"></div>
-
-                            {/* タイトルデザイン */}
-                            <div className="relative h-full p-4 flex flex-col justify-between z-30">
-                              <div className="border border-[#e0d0c0]/30 p-1 h-full flex flex-col backdrop-blur-[0.5px]">
-                                <div className="border border-[#e0d0c0]/20 flex-1 p-2 flex flex-col bg-black/10">
-                                  <span className="text-[10px] tracking-widest text-[#e0d0c0]/80 uppercase mb-2 border-b border-[#e0d0c0]/20 pb-1 self-start">{novel.site}</span>
-                                  <h3 className="font-serif font-bold text-white text-lg leading-snug drop-shadow-md line-clamp-4 filter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                                    {novel.title}
-                                  </h3>
-                                  <div className="mt-2 text-[10px] text-[#e0d0c0]/70 line-clamp-3 leading-relaxed">
-                                    {novel.info?.story || ""}
-                                  </div>
-                                  <p className="mt-auto text-xs text-[#e0d0c0] font-medium text-right drop-shadow-sm">
-                                    {novel.author}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* ステータスリボン */}
-                            {novel.status === 'reading' && (
-                              <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-red-700 to-red-600 shadow-md flex items-end justify-center pb-1 z-40">
-                                <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
-                              </div>
-                            )}
-                            {novel.status === 'completed' && (
-                              <div className="absolute -top-1 right-3 w-5 h-8 bg-gradient-to-b from-green-700 to-green-600 shadow-md flex items-end justify-center pb-1 z-40">
-                                <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#f3f0e9] absolute bottom-[-8px]"></div>
-                              </div>
-                            )}
+                          <div className="h-full py-4 flex flex-col items-center justify-between text-white/80">
+                            <div className="w-[1px] h-4 bg-white/20"></div>
+                            <span className="text-[10px] sm:text-xs font-serif font-bold vertical-rl tracking-widest truncate max-h-[80%] px-1 text-center">
+                              {novel.title}
+                            </span>
+                            <div className="w-[1px] h-4 bg-white/20"></div>
                           </div>
 
-                          {/* 2. PAGE BLOCK (中身・厚み) */}
-                          <div className="absolute inset-y-[1%] right-[1%] w-[98%] bg-[#fdfbf7] rounded-l-sm -translate-z-[4px] z-10">
-                            <div
-                              className="h-full w-full rounded-r-sm border-r border-gray-300 shadow-inner"
-                              style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e0e0e0, #e0e0e0 1px, #fff 1px, #fff 3px)' }}
-                            ></div>
-                          </div>
+                          {/* ステータスドット */}
+                          <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${novel.status === 'reading' ? 'bg-amber-400 animate-pulse' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] opacity-50'}`}></div>
+                        </div>
 
-                          {/* 3. INSIDE COVER (表紙の裏) */}
-                          <div
-                            className={`
-                           absolute inset-0 bg-[#fffefc] rounded-r-sm rounded-l-sm origin-left backface-hidden z-10 flex items-center justify-center p-4
-                           transition-transform ease-in-out border-l border-gray-200
-                           ${isOpening ? 'duration-[800ms] delay-[400ms] rotate-y-[-140deg]' : 'duration-300'}
-                        `}
-                            style={{ transform: `rotateY(180deg)` }}
-                          >
-                            <div className="text-center opacity-70 w-full p-2">
-                              <div className="border-2 border-double border-gray-300 p-2">
-                                <p className="font-serif text-gray-800 text-[10px] italic mb-1 line-clamp-1">{novel.title}</p>
-                                <p className="text-[8px] text-gray-500">{novel.author}</p>
+                        {/* 本を開く際のアニメーション用オーバーレイ */}
+                        {isOpening && (
+                          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
+                            <div className="relative w-64 aspect-[2/3] animate-in zoom-in-50 duration-700 ease-out preserve-3d">
+                              <div className="absolute inset-0 bg-cover bg-center rounded shadow-2xl transition-transform duration-1000 rotate-y-[-140deg] origin-left border border-white/10"
+                                style={{ backgroundImage: `url(https://picsum.photos/seed/${novel.id + 200}/300/450)` }}>
+                              </div>
+                              <div className="absolute inset-x-[1%] inset-y-[2%] bg-white rounded-l shadow-inner -translate-z-1"
+                                style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e0e0e0, #e0e0e0 1px, #fff 1px, #fff 3px)' }}>
                               </div>
                             </div>
                           </div>
-
-                          {/* 4. BACK COVER (裏表紙) */}
-                          <div className="absolute inset-0 bg-[#3e2e28] rounded-sm -translate-z-[14px] shadow-2xl border border-white/5"></div>
-
-                          {/* 5. SPINE (背表紙) */}
-                          <div className="absolute left-0 top-0 bottom-0 w-[14px] bg-[#2d211b] origin-left rotate-y-[-90deg] flex items-center justify-center overflow-hidden border-l border-white/10">
-                            <span className="text-[8px] text-gray-400 rotate-90 whitespace-nowrap opacity-50 tracking-widest">{novel.author}</span>
-                          </div>
-
-                        </div>
-
-                        {/* 更新ボタン */}
-                        <div className="absolute -top-4 -right-4 z-50 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-[-10px]">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSyncNovel(novel.id);
-                            }}
-                            className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all"
-                            title="最新の状態に更新"
-                          >
-                            <Loader className={`${isDownloading && downloadProgress.includes(novel.title) ? 'animate-spin' : ''}`} size={18} />
-                          </button>
-                        </div>
+                        )}
 
                         {/* 床の影 */}
-                        <div className={`
-                      absolute -bottom-8 left-2 right-2 h-4 bg-black/50 blur-lg rounded-[100%] 
-                      transition-all ease-in-out
-                      ${isOpening ? 'duration-[800ms] scale-75 opacity-30 translate-y-8' : 'duration-300 group-hover:scale-90 group-hover:opacity-60'}
-                    `}></div>
+                        <div className="absolute -bottom-4 left-0 right-0 h-2 bg-black/40 blur-md rounded-full scale-75 group-hover:scale-100 transition-all duration-300"></div>
 
                         {/* --- SHELF BOARD (棚板) --- */}
-                        <div className="absolute -bottom-10 -left-6 -right-6 h-6 bg-[#3e2723] rounded-sm shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-[-1]">
-                          <div className="absolute top-0 left-0 right-0 h-2 bg-[#4e342e]"></div>
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30"></div>
+                        <div className="absolute -bottom-6 -left-4 -right-4 h-4 bg-[#3e2723] rounded-sm shadow-xl z-[-1]">
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-[#4e342e]"></div>
                         </div>
                       </div>
                     );
@@ -822,6 +793,103 @@ export default function Tsunovel() {
                 </div>
               )}
             </div>
+
+            {/* --- Detail Modal --- */}
+            {selectedNovelId && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-md bg-black/40" onClick={() => setSelectedNovelId(null)}>
+                <div className="bg-[#fdfbf7] text-[#2d241e] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in slide-in-from-bottom-8 duration-500" onClick={e => e.stopPropagation()}>
+                  {/* 左側: カバー画像 */}
+                  <div className="w-full md:w-1/3 aspect-[2/3] md:aspect-auto bg-cover bg-center relative group"
+                    style={{ backgroundImage: `url(https://picsum.photos/seed/${selectedNovelId + 200}/300/450)` }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                      <p className="text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase opacity-70">
+                        {novels.find(n => n.id === selectedNovelId)?.site}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 右側: 詳細情報 */}
+                  <div className="flex-1 p-6 sm:p-8 flex flex-col">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-serif font-bold mb-1 leading-tight">
+                          {novels.find(n => n.id === selectedNovelId)?.title}
+                        </h3>
+                        <p className="text-sm opacity-60 italic">{novels.find(n => n.id === selectedNovelId)?.author}</p>
+                      </div>
+                      <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400">
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto mb-8 pr-2 custom-scrollbar">
+                      <div className="space-y-4">
+                        <div className="flex gap-4">
+                          <div className="bg-amber-100/50 px-3 py-1 rounded text-[10px] font-bold text-amber-800 border border-amber-200">
+                            {novels.find(n => n.id === selectedNovelId)?.info?.general_all_no || "?"} 話
+                          </div>
+                          <div className="bg-gray-100 px-3 py-1 rounded text-[10px] font-bold text-gray-600 border border-gray-200">
+                            {novels.find(n => n.id === selectedNovelId)?.info?.genre || "ジャンル未設定"}
+                          </div>
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
+                          {novels.find(n => n.id === selectedNovelId)?.info?.story || "あらすじを取得できませんでした。"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={() => {
+                          const id = selectedNovelId;
+                          setSelectedNovelId(null);
+                          handleBookClick(id);
+                        }}
+                        className="w-full bg-[#3e2723] hover:bg-[#2d1a16] text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Book size={20} />
+                        物語に入る
+                      </button>
+
+                      <div className="flex gap-2 relative">
+                        <button
+                          onClick={() => setIsUpdateOptionsOpen(!isUpdateOptionsOpen)}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm ${isUpdateOptionsOpen ? 'border-[#8d6e63] bg-amber-50 text-[#8d6e63]' : 'border-gray-200 text-gray-500 hover:border-gray-300 opacity-60'}`}
+                        >
+                          <Loader size={16} className={isDownloading ? 'animate-spin' : ''} />
+                          更新オプション
+                        </button>
+
+                        {isUpdateOptionsOpen && (
+                          <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 z-10 animate-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex flex-col gap-1">
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3 hover:bg-amber-50 rounded-lg text-xs font-bold transition-colors">全更新 (すべての話数を再取得)</button>
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3 hover:bg-amber-50 rounded-lg text-xs font-bold transition-colors">未取得話（新規）のみ更新</button>
+                              <div className="p-2 border-t border-gray-100 mt-1">
+                                <p className="text-[10px] text-gray-400 mb-2 px-2">指定エピソードのみ更新 (例: 1,5,10)</p>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="1, 2, 3..."
+                                    className="flex-1 text-xs px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-amber-500 transition-all font-mono"
+                                    value={updateEpisodesInput}
+                                    onChange={(e) => setUpdateEpisodesInput(e.target.value)}
+                                  />
+                                  <button
+                                    onClick={() => handleSyncNovel(selectedNovelId, 'specific', updateEpisodesInput)}
+                                    className="bg-amber-600 text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:bg-amber-700 transition-colors"
+                                  >更新</button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </main>
         </>
       )}
@@ -981,7 +1049,7 @@ export default function Tsunovel() {
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">行間</label>
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(1.2, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
+                            onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(0.5, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
                             className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
                             title="狭く"
                           >
@@ -989,7 +1057,7 @@ export default function Tsunovel() {
                           </button>
                           <input
                             type="range"
-                            min="1.2"
+                            min="0.5"
                             max="3.0"
                             step="0.1"
                             value={readerSettings.lineHeight}
@@ -1124,8 +1192,11 @@ export default function Tsunovel() {
                   <ArrowRight size={20} />
                 </button>
                 <button
-                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                  className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSettingsOpen(!isSettingsOpen);
+                  }}
+                  className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all shadow-sm"
                   title="設定"
                 >
                   <Settings size={20} />
@@ -1276,13 +1347,14 @@ export default function Tsunovel() {
                   </p>
                 </div>
 
-                <div className="pt-6 border-t border-[#3e2723] flex flex-col gap-4">
+                {/* レスポンシブ対応の保存ボタン */}
+                <div className="pt-6 border-t border-[#3e2723] flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={() => {
                       setGithubConfig(tempGithubConfig);
                       setViewMode('library');
                     }}
-                    className="w-full bg-[#8d6e63] hover:bg-[#795548] text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98]"
+                    className="flex-1 bg-[#8d6e63] hover:bg-[#795548] text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98]"
                   >
                     設定を保存して戻る
                   </button>
@@ -1291,7 +1363,7 @@ export default function Tsunovel() {
                       setTempGithubConfig(githubConfig);
                       setViewMode('library');
                     }}
-                    className="w-full bg-transparent text-[#8d6e63] hover:text-[#a1887f] font-bold py-2 rounded-xl transition-all"
+                    className="flex-1 bg-transparent text-[#8d6e63] hover:text-[#a1887f] font-bold py-4 rounded-xl transition-all border border-[#3e2723] sm:border-transparent"
                   >
                     キャンセル
                   </button>

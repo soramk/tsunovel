@@ -16,11 +16,13 @@ async function fetchNovel() {
         process.exit(1);
     }
     const ncode = ncodeRaw.toLowerCase();
+    const fetchType = process.env.FETCH_TYPE || 'full'; // 'full', 'specific', 'new'
+    const episodesInput = process.env.EPISODES || '';
 
     // ブラウザに近いUser-Agentに設定
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-    console.log(`--- Start Fetching: ${ncode} ---`);
+    console.log(`--- Start Fetching: ${ncode} (Type: ${fetchType}, Episodes: ${episodesInput}) ---`);
 
     try {
         // 1. メタデータの取得 (なろうAPI)
@@ -54,9 +56,31 @@ async function fetchNovel() {
         if (!fs.existsSync(chaptersPath)) fs.mkdirSync(chaptersPath, { recursive: true });
 
         const totalChapters = novelInfo.novel_type === 2 ? 1 : (novelInfo.general_all_no || 1);
-        console.log(`Total episodes target: ${totalChapters}`);
+        console.log(`Total episodes available: ${totalChapters}`);
 
-        for (let i = 1; i <= totalChapters; i++) {
+        // 取得対象エピソードの決定
+        let targetEpisodes = [];
+        if (fetchType === 'specific' && episodesInput) {
+            targetEpisodes = episodesInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0 && n <= totalChapters);
+        } else if (fetchType === 'new') {
+            for (let i = 1; i <= totalChapters; i++) {
+                if (!fs.existsSync(path.join(chaptersPath, `${i}.txt`))) {
+                    targetEpisodes.push(i);
+                }
+            }
+            if (targetEpisodes.length === 0) {
+                console.log('No new episodes to fetch.');
+            }
+        } else {
+            // default to 'full'
+            for (let i = 1; i <= totalChapters; i++) {
+                targetEpisodes.push(i);
+            }
+        }
+
+        console.log(`Target episodes count: ${targetEpisodes.length}`);
+
+        for (const i of targetEpisodes) {
             const contentUrl = novelInfo.novel_type === 2
                 ? `https://ncode.syosetu.com/${ncode}/`
                 : `https://ncode.syosetu.com/${ncode}/${i}/`;
@@ -171,7 +195,7 @@ async function fetchNovel() {
             }
 
             // 負荷軽減
-            if (totalChapters > 1) await new Promise(r => setTimeout(r, 1000));
+            if (targetEpisodes.length > 1) await new Promise(r => setTimeout(r, 1000));
         }
 
         // 3. インデックスの更新
