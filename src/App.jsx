@@ -730,36 +730,47 @@ export default function Tsunovel() {
   }, [currentChapter, viewMode, currentNovelId, readerSettings.transitionMode]);
 
   return (
-    <div className="min-h-screen bg-[#2c241b] text-gray-100 font-sans selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#141d26] text-gray-100 font-sans selection:bg-blue-500 selection:text-white overflow-x-hidden">
 
       {/* --- Library Mode --- */}
       {viewMode === 'library' && (
-        <>
-          <header className="bg-[#1e1915] text-[#d7ccc8] shadow-2xl sticky top-0 z-30 border-b border-[#3e2723]">
-            <div className="max-w-6xl mx-auto px-6">
-              <div className="flex flex-col items-center py-12">
-                <img src="/pict/title.png" alt="" className="h-48 md:h-72 w-auto mb-4" />
+        <div className="animate-in fade-in duration-1000">
+          <header className="bg-[#1a232e] text-[#d7ccc8] shadow-[0_10px_30px_rgba(0,0,0,0.5)] sticky top-0 z-30 border-b border-[#2c3e50]/50 relative overflow-hidden">
+            {/* 背景のグロウ装飾 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(100,149,237,0.1),transparent_70%)] pointer-events-none"></div>
+
+            <div className="max-w-6xl mx-auto px-6 relative z-10">
+              <div className="flex flex-col items-center py-10 md:py-16">
+                <div className="relative group">
+                  {/* ロゴ背後の後光効果 */}
+                  <div className="absolute inset-0 bg-blue-400/20 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                  <img
+                    src={`${import.meta.env.BASE_URL}pict/title.png`}
+                    alt="Tsunovel Logo"
+                    className="h-40 md:h-64 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] relative z-10 transition-transform duration-700 hover:scale-105"
+                  />
+                </div>
               </div>
-              <div className="absolute top-4 right-4 flex items-center gap-2">
+              <div className="absolute top-4 right-4 flex items-center gap-3">
                 <button
                   onClick={() => setViewMode('settings')}
-                  className="p-2 text-[#d7ccc8] hover:bg-[#3e2723] rounded-lg transition-colors"
+                  className="p-2.5 text-[#d7ccc8] hover:bg-[#2c3e50] rounded-xl transition-all border border-transparent hover:border-blue-400/30 shadow-lg active:scale-95"
                   title="設定"
                 >
-                  <Settings size={20} />
+                  <Settings size={22} />
                 </button>
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="bg-[#8d6e63] hover:bg-[#795548] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 border border-[#a1887f]"
+                  className="bg-gradient-to-br from-[#4b6584] to-[#2c3e50] hover:from-[#5d7a9b] hover:to-[#34495e] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-[0_4px_15px_rgba(0,0,0,0.3)] active:scale-95 border border-[#5d7a9b]/50 group"
                 >
-                  <Plus size={18} />
+                  <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
                   <span className="hidden sm:inline">小説を追加</span>
                 </button>
               </div>
             </div>
           </header>
 
-          <main className="max-w-7xl mx-auto px-4 py-8 relative min-h-[calc(100vh-64px)]">
+          <main className="max-w-7xl mx-auto px-4 py-12 relative min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_50%_0%,rgba(44,62,80,0.4),transparent_50%)]">
             {/* Library Content */}
 
             {/* Bookshelf Grid */}
@@ -861,8 +872,9 @@ export default function Tsunovel() {
                         <div className="absolute -bottom-4 left-0 right-0 h-2 bg-black/40 blur-md rounded-full scale-75 group-hover:scale-100 transition-all duration-300"></div>
 
                         {/* --- SHELF BOARD (棚板) --- */}
-                        <div className="absolute -bottom-6 -left-4 -right-4 h-4 bg-[#3e2723] rounded-sm shadow-xl z-[-1]">
-                          <div className="absolute top-0 left-0 right-0 h-1 bg-[#4e342e]"></div>
+                        <div className="absolute -bottom-6 -left-4 -right-4 h-5 bg-gradient-to-b from-[#2c3e50] to-[#1a232e] rounded-sm shadow-[0_5px_15px_rgba(0,0,0,0.5)] z-[-1] border-t border-[#34495e]/50">
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-white/5"></div>
+                          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-black/40"></div>
                         </div>
                       </div>
                     );
@@ -873,12 +885,12 @@ export default function Tsunovel() {
 
             {/* --- Detail Modal --- */}
             {selectedNovelId && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-md bg-black/40" onClick={() => setSelectedNovelId(null)}>
-                <div className="bg-[#fdfbf7] text-[#2d241e] w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in slide-in-from-bottom-8 duration-500" onClick={e => e.stopPropagation()}>
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-md bg-black/60" onClick={() => setSelectedNovelId(null)}>
+                <div className="bg-[#1c2632] text-[#d7ccc8] w-full max-w-2xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:flex-row animate-in slide-in-from-bottom-8 duration-500 border border-[#2c3e50]/50" onClick={e => e.stopPropagation()}>
                   {/* 左側: カバー画像 */}
                   <div className="w-full md:w-1/3 aspect-[2/3] md:aspect-auto bg-cover bg-center relative group"
                     style={{ backgroundImage: `url(https://picsum.photos/seed/${selectedNovelId + 200}/300/450)` }}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1c2632] via-transparent to-transparent flex items-end p-4">
                       <p className="text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase opacity-70">
                         {novels.find(n => n.id === selectedNovelId)?.site}
                       </p>
@@ -887,32 +899,32 @@ export default function Tsunovel() {
 
                   {/* 右側: 詳細情報 */}
                   <div className="flex-1 p-6 sm:p-8 flex flex-col">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-6">
                       <div className="flex-1">
-                        <h3 className="text-2xl font-serif font-bold mb-1 leading-tight">
+                        <h3 className="text-2xl font-serif font-bold mb-2 leading-tight text-white">
                           {novels.find(n => n.id === selectedNovelId)?.title}
                         </h3>
-                        <p className="text-sm opacity-60 italic">{novels.find(n => n.id === selectedNovelId)?.author}</p>
+                        <p className="text-sm text-blue-300 opacity-80 italic font-serif">{novels.find(n => n.id === selectedNovelId)?.author}</p>
                       </div>
-                      <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400">
+                      <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white">
                         <X size={20} />
                       </button>
                     </div>
 
                     <div className="flex-1 overflow-y-auto mb-8 pr-2 custom-scrollbar">
-                      <div className="space-y-4">
+                      <div className="space-y-5">
                         <div className="flex gap-4">
-                          <div className="bg-amber-100/50 px-3 py-1 rounded text-[10px] font-bold text-amber-800 border border-amber-200">
+                          <div className="bg-blue-900/40 px-3 py-1 rounded text-[10px] font-bold text-blue-200 border border-blue-700/50 shadow-sm">
                             {novels.find(n => n.id === selectedNovelId)?.info?.general_all_no || "?"} 話
                           </div>
-                          <div className="bg-gray-100 px-3 py-1 rounded text-[10px] font-bold text-gray-600 border border-gray-200">
+                          <div className="bg-slate-800/60 px-3 py-1 rounded text-[10px] font-bold text-slate-300 border border-slate-700/50">
                             {(() => {
                               const genreId = novels.find(n => n.id === selectedNovelId)?.info?.genre;
                               return (genreId !== undefined && genreId !== null) ? (GENRE_MAP[genreId.toString()] || genreId) : "ジャンル未設定";
                             })()}
                           </div>
                         </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
                           {novels.find(n => n.id === selectedNovelId)?.info?.story || "あらすじを取得できませんでした。"}
                         </p>
                       </div>
@@ -925,45 +937,45 @@ export default function Tsunovel() {
                           setSelectedNovelId(null);
                           handleBookClick(id);
                         }}
-                        className="w-full bg-[#3e2723] hover:bg-[#2d1a16] text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                       >
                         <Book size={20} />
-                        物語に入る
+                        物語世界へ
                       </button>
 
                       <div className="flex gap-2 relative">
                         <button
                           onClick={() => setIsUpdateOptionsOpen(!isUpdateOptionsOpen)}
-                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm ${isUpdateOptionsOpen ? 'border-[#8d6e63] bg-amber-50 text-[#8d6e63]' : 'border-gray-200 text-gray-500 hover:border-gray-300 opacity-60'}`}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm ${isUpdateOptionsOpen ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'}`}
                         >
                           <Loader size={16} className={isDownloading ? 'animate-spin' : ''} />
-                          更新オプション
+                          更新設定
                         </button>
 
                         {isUpdateOptionsOpen && (
-                          <div className="absolute bottom-full left-0 right-0 mb-3 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-gray-100 p-3 z-10 animate-in slide-in-from-bottom-2 duration-200">
+                          <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#1a232e] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-[#2c3e50] p-3 z-10 animate-in slide-in-from-bottom-2 duration-200">
                             <div className="flex flex-col gap-1.5 label-sans">
-                              <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3.5 hover:bg-amber-50 rounded-xl text-sm font-bold transition-colors text-gray-800">
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3.5 hover:bg-blue-600/20 rounded-xl text-sm font-bold transition-colors text-slate-200">
                                 🔄 全更新 (すべての話を再取得)
                               </button>
-                              <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3.5 hover:bg-amber-50 rounded-xl text-sm font-bold transition-colors text-gray-800">
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3.5 hover:bg-blue-600/20 rounded-xl text-sm font-bold transition-colors text-slate-200">
                                 ✨ 未取得話（新規）のみ更新
                               </button>
-                              <div className="p-3 border-t border-gray-100 mt-1.5">
-                                <p className="text-xs text-gray-400 mb-3 px-1 font-bold">指定エピソードのみ更新 (例: 1,5,10)</p>
+                              <div className="p-3 border-t border-slate-700/50 mt-1.5">
+                                <p className="text-xs text-slate-500 mb-3 px-1 font-bold">特定エピソードの更新 (例: 1,5,10)</p>
                                 <div className="flex gap-2">
                                   <input
                                     type="text"
                                     placeholder="1, 2, 3..."
-                                    className="flex-1 text-sm px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all font-mono"
+                                    className="flex-1 text-sm px-4 py-2.5 bg-slate-900/50 border border-slate-700 rounded-xl outline-none focus:border-blue-500/50 transition-all font-mono text-white"
                                     value={updateEpisodesInput}
                                     onChange={(e) => setUpdateEpisodesInput(e.target.value)}
                                   />
                                   <button
                                     onClick={() => handleSyncNovel(selectedNovelId, 'specific', updateEpisodesInput)}
-                                    className="bg-amber-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-amber-700 shadow-md transition-all active:scale-95"
+                                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-md transition-all active:scale-95"
                                   >
-                                    更新
+                                    実行
                                   </button>
                                 </div>
                               </div>
@@ -977,7 +989,7 @@ export default function Tsunovel() {
               </div>
             )}
           </main>
-        </>
+        </div>
       )}
 
       {/* --- Reader Mode --- */}
