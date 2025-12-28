@@ -28,7 +28,7 @@ async function fetchNovel() {
         // 1. メタデータの取得 (なろうAPI)
         const apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}`;
         console.log('Fetching metadata from API...');
-        const apiResponse = await httpRequest(apiUrl, { 'User-Agent': userAgent });
+        const apiResponse = await httpRequestWithRetry(apiUrl, { 'User-Agent': userAgent });
 
         let jsonData;
         try {
@@ -88,7 +88,7 @@ async function fetchNovel() {
             console.log(`[${i}/${totalChapters}] Fetching: ${contentUrl}`);
 
             try {
-                const html = await httpRequest(contentUrl, {
+                const html = await httpRequestWithRetry(contentUrl, {
                     'User-Agent': userAgent,
                     'Cookie': 'over18=yes',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -210,15 +210,41 @@ async function fetchNovel() {
 }
 
 /**
+ * リトライ機能付きリクエスト
+ */
+async function httpRequestWithRetry(url, headers, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await httpRequest(url, headers);
+        } catch (err) {
+            const isLast = i === retries - 1;
+            const waitTime = i === 0 ? 2000 : 5000;
+            console.error(`Request failed (Attempt ${i + 1}/${retries}): ${err.message}`);
+            if (isLast) throw err;
+            console.log(`Waiting ${waitTime}ms before retry...`);
+            await new Promise(r => setTimeout(r, waitTime));
+        }
+    }
+}
+
+/**
  * リクエスト関数
  */
 function httpRequest(url, headers) {
     return new Promise((resolve, reject) => {
-        https.get(url, { headers }, (res) => {
+        const options = {
+            headers: headers,
+            timeout: 60000 // 60s
+        };
+        https.get(url, options, (res) => {
             if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                 // リダイレクト対応
                 console.log(`Following redirect to: ${res.headers.location}`);
                 return httpRequest(res.headers.location, headers).then(resolve).catch(reject);
+            }
+
+            if (res.statusCode !== 200) {
+                return reject(new Error(`HTTP Error: ${res.statusCode}`));
             }
 
             let chunks = [];
@@ -241,9 +267,9 @@ function httpRequest(url, headers) {
                     resolve(buffer.toString());
                 }
             });
-        }).on('error', reject).setTimeout(20000, function () {
+        }).on('error', reject).on('timeout', function () {
             this.destroy();
-            reject(new Error('HTTP Timeout (20s)'));
+            reject(new Error('HTTP Timeout (60s)'));
         });
     });
 }
