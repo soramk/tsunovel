@@ -740,18 +740,18 @@ export default function Tsunovel() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(100,149,237,0.1),transparent_70%)] pointer-events-none"></div>
 
             <div className="max-w-6xl mx-auto px-6 relative z-10">
-              <div className="flex flex-col items-center py-10 md:py-16">
+              <div className="flex flex-col items-center py-8 md:py-16">
                 <div className="relative group">
                   {/* ロゴ背後の後光効果 */}
                   <div className="absolute inset-0 bg-blue-400/20 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
                   <img
                     src={`${import.meta.env.BASE_URL}pict/title.png`}
                     alt="Tsunovel Logo"
-                    className="h-40 md:h-64 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] relative z-10 transition-transform duration-700 hover:scale-105"
+                    className="h-28 sm:h-40 md:h-64 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] relative z-10 transition-transform duration-700 hover:scale-105"
                   />
                 </div>
               </div>
-              <div className="absolute top-4 right-4 flex items-center gap-3">
+              <div className="absolute top-4 right-4 flex items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => setViewMode('settings')}
                   className="p-2.5 text-[#d7ccc8] hover:bg-[#2c3e50] rounded-xl transition-all border border-transparent hover:border-blue-400/30 shadow-lg active:scale-95"
