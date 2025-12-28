@@ -908,7 +908,7 @@ export default function Tsunovel() {
                           <div className="bg-gray-100 px-3 py-1 rounded text-[10px] font-bold text-gray-600 border border-gray-200">
                             {(() => {
                               const genreId = novels.find(n => n.id === selectedNovelId)?.info?.genre;
-                              return GENRE_MAP[genreId.toString()] || genreId || "ジャンル未設定";
+                              return (genreId !== undefined && genreId !== null) ? (GENRE_MAP[genreId.toString()] || genreId) : "ジャンル未設定";
                             })()}
                           </div>
                         </div>
