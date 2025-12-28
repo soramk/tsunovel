@@ -27,6 +27,31 @@ import {
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, pollData, fetchIndex } from './utils/githubActions';
 
+const GENRE_MAP = {
+  '0': '未選択〔未選択〕',
+  '101': '異世界〔恋愛〕',
+  '102': '現実世界〔恋愛〕',
+  '201': 'ハイファンタジー〔ファンタジー〕',
+  '202': 'ローファンタジー〔ファンタジー〕',
+  '301': '純文学〔文芸〕',
+  '302': 'ヒューマンドラマ〔文芸〕',
+  '303': '歴史〔文芸〕',
+  '304': '推理〔文芸〕',
+  '305': 'ホラー〔文芸〕',
+  '306': 'アクション〔文芸〕',
+  '307': 'コメディー〔文芸〕',
+  '401': 'VRゲーム〔SF〕',
+  '402': '宇宙〔SF〕',
+  '403': '空想科学〔SF〕',
+  '404': 'パニック〔SF〕',
+  '9901': '童話〔その他〕',
+  '9902': '詩〔その他〕',
+  '9903': 'エッセイ〔その他〕',
+  '9904': 'リプレイ〔その他〕',
+  '9999': 'その他〔その他〕',
+  '9801': 'ノンジャンル〔ノンジャンル〕'
+};
+
 /**
  * Tsunovel - Prototype v5
  * Update: 
@@ -881,7 +906,10 @@ export default function Tsunovel() {
                             {novels.find(n => n.id === selectedNovelId)?.info?.general_all_no || "?"} 話
                           </div>
                           <div className="bg-gray-100 px-3 py-1 rounded text-[10px] font-bold text-gray-600 border border-gray-200">
-                            {novels.find(n => n.id === selectedNovelId)?.info?.genre || "ジャンル未設定"}
+                            {(() => {
+                              const genreId = novels.find(n => n.id === selectedNovelId)?.info?.genre;
+                              return GENRE_MAP[genreId.toString()] || genreId || "ジャンル未設定";
+                            })()}
                           </div>
                         </div>
                         <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
@@ -913,24 +941,30 @@ export default function Tsunovel() {
                         </button>
 
                         {isUpdateOptionsOpen && (
-                          <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 z-10 animate-in slide-in-from-bottom-2 duration-200">
-                            <div className="flex flex-col gap-1">
-                              <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3 hover:bg-amber-50 rounded-lg text-xs font-bold transition-colors">全更新 (すべての話数を再取得)</button>
-                              <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3 hover:bg-amber-50 rounded-lg text-xs font-bold transition-colors">未取得話（新規）のみ更新</button>
-                              <div className="p-2 border-t border-gray-100 mt-1">
-                                <p className="text-[10px] text-gray-400 mb-2 px-2">指定エピソードのみ更新 (例: 1,5,10)</p>
+                          <div className="absolute bottom-full left-0 right-0 mb-3 bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-gray-100 p-3 z-10 animate-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex flex-col gap-1.5 label-sans">
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3.5 hover:bg-amber-50 rounded-xl text-sm font-bold transition-colors text-gray-800">
+                                🔄 全更新 (すべての話を再取得)
+                              </button>
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3.5 hover:bg-amber-50 rounded-xl text-sm font-bold transition-colors text-gray-800">
+                                ✨ 未取得話（新規）のみ更新
+                              </button>
+                              <div className="p-3 border-t border-gray-100 mt-1.5">
+                                <p className="text-xs text-gray-400 mb-3 px-1 font-bold">指定エピソードのみ更新 (例: 1,5,10)</p>
                                 <div className="flex gap-2">
                                   <input
                                     type="text"
                                     placeholder="1, 2, 3..."
-                                    className="flex-1 text-xs px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-amber-500 transition-all font-mono"
+                                    className="flex-1 text-sm px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition-all font-mono"
                                     value={updateEpisodesInput}
                                     onChange={(e) => setUpdateEpisodesInput(e.target.value)}
                                   />
                                   <button
                                     onClick={() => handleSyncNovel(selectedNovelId, 'specific', updateEpisodesInput)}
-                                    className="bg-amber-600 text-white px-3 py-2 rounded-lg text-[10px] font-bold hover:bg-amber-700 transition-colors"
-                                  >更新</button>
+                                    className="bg-amber-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-amber-700 shadow-md transition-all active:scale-95"
+                                  >
+                                    更新
+                                  </button>
                                 </div>
                               </div>
                             </div>
