@@ -174,6 +174,45 @@ export default function Tsunovel() {
     };
   }, [isSettingsOpen, viewMode]);
 
+  /**
+   * 小説の個別情報 (info.json) を取得する
+   */
+  const loadNovelInfo = async (novelId) => {
+    const novel = novels.find(n => n.id === novelId);
+    if (!novel || novel.info) return; // すでに取得済みなら何もしない
+
+    try {
+      const ncodeLower = novel.ncode.toLowerCase();
+      const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/info.json`;
+
+      const fetchOptions = githubConfig.pat ? {
+        headers: {
+          'Authorization': `Bearer ${githubConfig.pat}`,
+          'Accept': 'application/vnd.github.v3.raw',
+        }
+      } : {};
+
+      const infoRes = await fetch(infoUrl, fetchOptions);
+      if (infoRes.ok) {
+        const infoText = await infoRes.text();
+        const infoData = JSON.parse(infoText);
+
+        setNovels(prev => prev.map(n =>
+          n.id === novelId ? { ...n, info: infoData } : n
+        ));
+      }
+    } catch (e) {
+      console.error('Failed to load novel info:', e);
+    }
+  };
+
+  // 本を選択した際の情報ロード
+  useEffect(() => {
+    if (selectedNovelId) {
+      loadNovelInfo(selectedNovelId);
+    }
+  }, [selectedNovelId]);
+
   // 本を開くアニメーション処理
   const handleBookClick = async (novelId) => {
     if (openingBookId) return;
@@ -731,13 +770,19 @@ export default function Tsunovel() {
                   {novels.map((novel, index) => {
                     const isOpening = openingBookId === novel.id;
 
-                    // 背表紙のデザイン（ランダムな色合い）
-                    const colors = [
-                      'bg-[#3e2e28]', 'bg-[#2d241e]', 'bg-[#4a3728]',
-                      'bg-[#5d4037]', 'bg-[#3e2723]', 'bg-[#263238]',
-                      'bg-[#1a237e]', 'bg-[#1b5e20]', 'bg-[#b71c1c]'
+                    // 背表紙のデザイン（よりリアルなテクスチャ）
+                    const spineStyles = [
+                      { bg: 'bg-[#3e2e28]', border: 'border-[#513c34]', pattern: 'inset-y-0 left-0 w-[2px] bg-black/20' },
+                      { bg: 'bg-[#2d241e]', border: 'border-[#3f322a]', pattern: 'inset-y-0 left-1 w-[1px] bg-white/5' },
+                      { bg: 'bg-[#4a3728]', border: 'border-[#5e4633]', pattern: 'inset-y-0 right-1 w-[1px] bg-black/30' },
+                      { bg: 'bg-[#5d4037]', border: 'border-[#6f4f44]', pattern: 'inset-y-0 left-2 w-[1px] bg-black/10' },
+                      { bg: 'bg-[#3e2723]', border: 'border-[#4e342e]', pattern: 'inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05)_0%,transparent_100%)]' },
+                      { bg: 'bg-[#263238]', border: 'border-[#37474f]', pattern: 'inset-y-0 left-1 w-[1px] bg-white/10' },
+                      { bg: 'bg-[#1a237e]', border: 'border-[#283593]', pattern: 'inset-y-0 left-1 w-[2px] bg-black/20' },
+                      { bg: 'bg-[#1b5e20]', border: 'border-[#2e7d32]', pattern: 'inset-y-0 right-2 w-[1px] bg-black/20' }
                     ];
-                    const spineColor = colors[Math.abs(novel.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % colors.length];
+                    const seedId = Math.abs(novel.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0));
+                    const style = spineStyles[seedId % spineStyles.length];
 
                     return (
                       <div
@@ -749,21 +794,28 @@ export default function Tsunovel() {
                           onClick={() => setSelectedNovelId(novel.id)}
                           className={`
                             relative w-10 sm:w-14 h-48 sm:h-64 cursor-pointer transition-all duration-300 transform
-                            ${spineColor} rounded shadow-lg border-l border-white/10 flex items-center justify-center
+                            ${style.bg} ${style.border} rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.5),inset_-1px_0_3px_rgba(255,255,255,0.1)] 
+                            border-l border-t border-b flex items-center justify-center
                             hover:-translate-y-4 hover:brightness-110 active:scale-95
                             ${isOpening ? 'opacity-0 scale-150' : 'opacity-100'}
                           `}
                         >
-                          <div className="h-full py-4 flex flex-col items-center justify-between text-white/80">
-                            <div className="w-[1px] h-4 bg-white/20"></div>
-                            <span className="text-[10px] sm:text-xs font-serif font-bold vertical-rl tracking-widest truncate max-h-[80%] px-1 text-center">
+                          {/* テクスチャオーバーレイ */}
+                          <div className={`absolute ${style.pattern} opacity-50`}></div>
+                          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] opacity-10 mix-blend-overlay"></div>
+                          <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-r from-black/30 to-transparent"></div>
+
+                          <div className="h-full py-6 flex flex-col items-center justify-between text-[#e0d0c0]/90 z-10">
+                            <div className="w-[1px] h-4 bg-[#e0d0c0]/20"></div>
+                            <span className="text-[11px] sm:text-[13px] font-serif font-bold vertical-rl tracking-[0.2em] truncate max-h-[85%] px-1 text-center"
+                              style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>
                               {novel.title}
                             </span>
-                            <div className="w-[1px] h-4 bg-white/20"></div>
+                            <div className="w-[1px] h-4 bg-[#e0d0c0]/20"></div>
                           </div>
 
-                          {/* ステータスドット */}
-                          <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${novel.status === 'reading' ? 'bg-amber-400 animate-pulse' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] opacity-50'}`}></div>
+                          {/* ステータスサイン (より上品に) */}
+                          <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${novel.status === 'reading' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'bg-green-500 opacity-40 shadow-[0_0_4px_rgba(34,197,94,0.4)]'}`}></div>
                         </div>
 
                         {/* 本を開く際のアニメーション用オーバーレイ */}
@@ -1511,10 +1563,20 @@ export default function Tsunovel() {
                     <p className="text-xs text-gray-500 mt-2">
                       対応サイト: 小説家になろう (GitHub Actionsプロキシ経由)
                     </p>
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
-                      <p className="text-[10px] text-gray-500 leading-relaxed italic">
-                        ※GitHubのリポジトリ設定（Owner/Repo/PAT）は「設定」メニューから行えます。
-                      </p>
+                    <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Coffee className="text-indigo-600" size={20} />
+                        <div>
+                          <p className="text-xs font-bold text-indigo-900">なろうランキングから探す</p>
+                          <p className="text-[10px] text-indigo-700 opacity-70">人気の作品をチェックしましょう</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => window.open('https://yomou.syosetu.com/rank/top/', '_blank')}
+                        className="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-sm hover:shadow-md transition-all active:scale-95 border border-indigo-100"
+                      >
+                        開く
+                      </button>
                     </div>
                   </div>
 
