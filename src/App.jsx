@@ -739,190 +739,148 @@ export default function Tsunovel() {
 
       {/* --- Library Mode --- */}
       {viewMode === 'library' && (
-        <div className="animate-in fade-in duration-1000">
-          <header className="bg-[#1a232e] text-[#d7ccc8] shadow-[0_10px_30px_rgba(0,0,0,0.5)] sticky top-0 z-30 border-b border-[#2c3e50]/50 relative overflow-hidden">
-            {/* 背景のグロウ装飾 */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(100,149,237,0.1),transparent_70%)] pointer-events-none"></div>
+        <div className="relative min-h-screen overflow-hidden">
+          {/* Background Image */}
+          <div 
+            className="fixed inset-0 z-0 bg-cover bg-center transition-transform duration-[10s] hover:scale-105"
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}pict/fantasy_library_bg.png)` }}
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+          </div>
 
-            <div className="max-w-6xl mx-auto px-6 relative z-10 flex flex-col">
-              {/* UIボタン用の行 - モバイルでは上部に配置し、重なりを回避 */}
-              <div className="flex justify-between items-center pt-4 md:absolute md:top-6 md:left-6 md:right-6 md:pt-0">
+          <div className="relative z-10 animate-in fade-in duration-1000">
+            <header className="pt-8 px-6">
+              <div className="max-w-6xl mx-auto flex justify-between items-start">
+                {/* Left Side: Genre Button */}
                 <button
                   onClick={() => setIsSidebarOpen(true)}
-                  className="p-2.5 text-[#d7ccc8] hover:bg-[#2c3e50] rounded-xl transition-all border border-transparent hover:border-blue-400/30 shadow-lg active:scale-95 flex items-center gap-2 group"
-                  title="メニュー"
+                  className="wooden-frame p-4 rounded-lg flex items-center gap-3 group active:scale-95 transition-transform"
                 >
-                  <Menu size={22} className="group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold hidden sm:inline">ジャンル</span>
+                  <Menu size={24} className="text-amber-200 group-hover:rotate-90 transition-transform" />
+                  <span className="text-amber-100 font-serif font-bold text-sm hidden sm:inline tracking-widest">目録を開く</span>
                 </button>
-                <div className="flex items-center gap-3 md:gap-4">
-                  <button
-                    onClick={() => setViewMode('settings')}
-                    className="p-2.5 text-[#d7ccc8] hover:bg-[#2c3e50] rounded-xl transition-all border border-transparent hover:border-blue-400/30 shadow-lg active:scale-95"
-                    title="設定"
-                  >
-                    <Settings size={22} />
-                  </button>
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-gradient-to-br from-[#4b6584] to-[#2c3e50] hover:from-[#5d7a9b] hover:to-[#34495e] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-[0_4px_15px_rgba(0,0,0,0.3)] active:scale-95 border border-[#5d7a9b]/50 group"
-                  >
-                    <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                    <span className="hidden sm:inline">小説を追加</span>
-                  </button>
-                </div>
-              </div>
 
-              {/* ロゴ用の中心領域 */}
-              <div className="flex flex-col items-center py-10 md:py-20">
-                <div className="relative group">
-                  {/* ロゴ背後の後光効果 */}
-                  <div className="absolute inset-0 bg-blue-400/20 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                {/* Center: Logo */}
+                <div className="absolute left-1/2 -translate-x-1/2 top-4 md:top-8 pointer-events-none">
                   <img
                     src={`${import.meta.env.BASE_URL}pict/title.png`}
                     alt="Tsunovel Logo"
-                    className="h-48 md:h-72 w-auto drop-shadow-[0_0_25px_rgba(0,0,0,0.9)] relative z-10 transition-transform duration-700 hover:scale-105"
+                    className="h-32 md:h-56 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] magical-glow animate-float"
                   />
                 </div>
+
+                {/* Right Side: Action Buttons */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="wooden-frame h-14 px-6 rounded-lg flex items-center gap-2 group active:scale-95 transition-transform"
+                  >
+                    <Plus size={24} className="text-amber-200 group-hover:scale-125 transition-transform" />
+                    <span className="text-amber-100 font-serif font-bold text-sm hidden sm:inline tracking-widest">召喚</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('settings')}
+                    className="wooden-frame p-4 rounded-lg flex items-center group active:scale-95 transition-transform"
+                  >
+                    <Settings size={24} className="text-amber-200 group-hover:rotate-45 transition-transform" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          <main className="max-w-7xl mx-auto px-4 py-12 relative min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_50%_0%,rgba(44,62,80,0.4),transparent_50%)]">
-            {/* Library Content */}
+            <main className="max-w-7xl mx-auto px-4 pt-48 pb-12">
 
-            {/* Bookshelf Grid */}
             <div className="min-h-[400px]">
               {isLoadingIndex ? (
-                <div className="flex flex-col items-center justify-center py-20 text-[#d7ccc8] gap-4">
+                <div className="flex flex-col items-center justify-center py-20 text-amber-100 gap-4">
                   <Loader className="animate-spin" size={48} />
-                  <p className="font-serif italic">Library loading...</p>
+                  <p className="font-serif italic text-lg magical-glow">魔導書架を整理中...</p>
                 </div>
               ) : loadError ? (
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="bg-red-900/40 border border-red-500/50 rounded-xl p-8 max-w-sm">
+                  <div className="wooden-frame rounded-xl p-8 max-w-sm">
                     <X size={48} className="mx-auto mb-4 text-red-400" />
-                    <h3 className="text-xl font-bold text-white mb-2 font-serif">Oops!</h3>
+                    <h3 className="text-xl font-bold text-white mb-2 font-serif">Error!</h3>
                     <p className="text-red-200 text-sm mb-6">{loadError}</p>
                     <button
                       onClick={() => window.location.reload()}
-                      className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-full text-sm font-bold transition-colors shadow-lg"
+                      className="px-6 py-2 bg-red-900/60 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-colors shadow-lg border border-red-500/30"
                     >
                       Retry
                     </button>
-                    <p className="mt-4 text-[10px] text-red-300 opacity-60">※PATの設定やリポジトリ名を確認してください</p>
                   </div>
                 </div>
               ) : novels.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-[#d7ccc8] opacity-50 text-center px-4">
-                  <Book size={48} className="mb-4" />
-                  <p className="font-serif italic mb-2">Shelf is empty.</p>
-                  <p className="text-xs">「小説を追加」から作品をダウンロードしてください</p>
+                <div className="flex flex-col items-center justify-center py-20 text-amber-100/60 text-center px-4">
+                  <Book size={48} className="mb-4 opacity-50" />
+                  <p className="font-serif italic text-xl mb-2">Shelf is empty.</p>
+                  <p className="text-sm">「召喚」から新しい物語を呼び出してください</p>
                 </div>
               ) : (
-                <div className="max-w-6xl mx-auto px-4 pb-60 pt-32">
+                <div className="max-w-7xl mx-auto px-4 overflow-x-auto pb-12 pt-8 custom-scrollbar">
                   {selectedGenre !== 'all' && (
-                    <div className="mb-12 flex items-center justify-between bg-blue-500/10 border border-blue-400/20 p-4 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500 backdrop-blur-sm">
+                    <div className="mb-12 flex items-center justify-between wooden-frame p-4 rounded-xl animate-in fade-in slide-in-from-top-4 duration-500">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
-                          <Filter size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-blue-400/60 uppercase tracking-widest">書架の絞り込み中</p>
-                          <p className="text-lg font-serif font-bold text-blue-200">
-                            {GENRE_MAP[selectedGenre]}
-                          </p>
-                        </div>
+                        <Filter size={20} className="text-amber-300" />
+                        <p className="text-lg font-serif font-bold text-amber-100">
+                          {GENRE_MAP[selectedGenre]}
+                        </p>
                       </div>
                       <button
                         onClick={() => setSelectedGenre('all')}
-                        className="text-xs font-bold text-white/50 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl border border-white/5 hover:border-white/20 active:scale-95"
+                        className="text-xs font-bold text-amber-200/50 hover:text-amber-200 transition-all bg-black/20 px-4 py-2 rounded-lg border border-amber-500/20"
                       >
-                        フィルタ解除
+                        全収蔵表示
                       </button>
                     </div>
                   )}
 
-                  <div className="flex flex-wrap justify-center gap-2 sm:gap-4 items-end">
+                  <div className="flex items-start gap-8 px-8 min-w-max">
                     {novels
                       .filter(novel => selectedGenre === 'all' || novel.info?.genre?.toString() === selectedGenre)
                       .map((novel, index) => {
-                        const isOpening = openingBookId === novel.id;
-
-                        // 背表紙のデザイン（よりリアルなテクスチャ）
-                        const spineStyles = [
-                          { bg: 'bg-[#3e2e28]', border: 'border-[#513c34]', pattern: 'inset-y-0 left-0 w-[2px] bg-black/20' },
-                          { bg: 'bg-[#2d241e]', border: 'border-[#3f322a]', pattern: 'inset-y-0 left-1 w-[1px] bg-white/5' },
-                          { bg: 'bg-[#4a3728]', border: 'border-[#5e4633]', pattern: 'inset-y-0 right-1 w-[1px] bg-black/30' },
-                          { bg: 'bg-[#5d4037]', border: 'border-[#6f4f44]', pattern: 'inset-y-0 left-2 w-[1px] bg-black/10' },
-                          { bg: 'bg-[#3e2723]', border: 'border-[#4e342e]', pattern: 'inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05)_0%,transparent_100%)]' },
-                          { bg: 'bg-[#263238]', border: 'border-[#37474f]', pattern: 'inset-y-0 left-1 w-[1px] bg-white/10' },
-                          { bg: 'bg-[#1a237e]', border: 'border-[#283593]', pattern: 'inset-y-0 left-1 w-[2px] bg-black/20' },
-                          { bg: 'bg-[#1b5e20]', border: 'border-[#2e7d32]', pattern: 'inset-y-0 right-2 w-[1px] bg-black/20' }
-                        ];
-                        const seedId = Math.abs(novel.id.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0));
-                        const style = spineStyles[seedId % spineStyles.length];
-
                         return (
                           <div
                             key={novel.id}
-                            className={`relative group ${isOpening ? 'z-50' : 'hover:z-40 z-10'}`}
+                            onClick={() => setSelectedNovelId(novel.id)}
+                            className="group flex flex-col items-center gap-4 cursor-pointer animate-in fade-in slide-in-from-right-8 duration-500"
+                            style={{ animationDelay: `${index * 100}ms` }}
                           >
-                            {/* --- SPINE ONLY VIEW --- */}
-                            <div
-                              onClick={() => setSelectedNovelId(novel.id)}
-                              className={`
-                            relative w-10 sm:w-14 h-48 sm:h-64 cursor-pointer transition-all duration-300 transform
-                            ${style.bg} ${style.border} rounded-sm shadow-[2px_4px_12px_rgba(0,0,0,0.5),inset_-1px_0_3px_rgba(255,255,255,0.1)] 
-                            border-l border-t border-b flex items-center justify-center
-                            hover:-translate-y-4 hover:brightness-110 active:scale-95
-                            ${isOpening ? 'opacity-0 scale-150' : 'opacity-100'}
-                          `}
-                            >
-                              {/* テクスチャオーバーレイ */}
-                              <div className={`absolute ${style.pattern} opacity-50`}></div>
-                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/leather.png')] opacity-10 mix-blend-overlay"></div>
-                              <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-r from-black/30 to-transparent"></div>
-
-                              <div className="h-full py-6 flex flex-col items-center justify-between text-[#e0d0c0]/90 z-10">
-                                <div className="w-[1px] h-4 bg-[#e0d0c0]/20"></div>
-                                <span className="text-[11px] sm:text-[13px] font-serif font-bold vertical-rl tracking-[0.2em] truncate max-h-[85%] px-1 text-center"
-                                  style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>
+                            {/* Scroll (Makimono) UI */}
+                            <div className="flex flex-col items-center w-24 sm:w-32 transition-transform duration-300 group-hover:-translate-y-4">
+                              {/* Top Handle */}
+                              <div className="w-full h-4 scroll-handle rounded-t-sm"></div>
+                              
+                              {/* Content Body */}
+                              <div className="w-[90%] h-48 sm:h-64 scroll-body relative flex items-center justify-center p-4">
+                                <span className="text-sm sm:text-base font-serif font-bold text-[#5b4636] vertical-rl tracking-[0.2em] leading-relaxed line-clamp-2 text-center"
+                                      style={{ writingMode: 'vertical-rl' }}>
                                   {novel.title}
                                 </span>
-                                <div className="w-[1px] h-4 bg-[#e0d0c0]/20"></div>
+                                
+                                {novel.status === 'reading' && (
+                                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+                                )}
                               </div>
-
-                              {/* ステータスサイン (より上品に) */}
-                              <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${novel.status === 'reading' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'bg-green-500 opacity-40 shadow-[0_0_4px_rgba(34,197,94,0.4)]'}`}></div>
+                              
+                              {/* Bottom Handle */}
+                              <div className="w-full h-4 scroll-handle rounded-b-sm"></div>
                             </div>
-
-                            {/* 本を開く際のアニメーション用オーバーレイ */}
-                            {isOpening && (
-                              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
-                                <div className="relative w-64 aspect-[2/3] animate-in zoom-in-50 duration-700 ease-out preserve-3d">
-                                  <div className="absolute inset-0 bg-cover bg-center rounded shadow-2xl transition-transform duration-1000 rotate-y-[-140deg] origin-left border border-white/10"
-                                    style={{ backgroundImage: `url(https://picsum.photos/seed/${novel.id + 200}/300/450)` }}>
-                                  </div>
-                                  <div className="absolute inset-x-[1%] inset-y-[2%] bg-white rounded-l shadow-inner -translate-z-1"
-                                    style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e0e0e0, #e0e0e0 1px, #fff 1px, #fff 3px)' }}>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 床の影 */}
-                            <div className="absolute -bottom-4 left-0 right-0 h-2 bg-black/40 blur-md rounded-full scale-75 group-hover:scale-100 transition-all duration-300"></div>
-
+                            
+                            {/* Novel Info Label */}
+                            <div className="text-center w-full max-w-[128px]">
+                              <p className="text-[10px] text-amber-200/60 font-serif italic truncate">{novel.author}</p>
+                            </div>
                           </div>
                         );
                       })}
                   </div>
                 </div>
-              )
-              }
+              )}
             </div>
           </main>
+        </div>
+      )}
 
           {/* --- Genre Sidebar / Drawer --- */}
           {isSidebarOpen && (
