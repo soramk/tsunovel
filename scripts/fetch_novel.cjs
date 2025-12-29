@@ -40,9 +40,9 @@ async function processSingleNovel(ncode, fetchType, episodesInput, userAgent) {
 
     try {
         // 1. メタデータの取得 (なろうAPI)
-        const apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}`;
-        console.log('Fetching metadata from API...');
-        const apiResponse = await httpRequestWithRetry(apiUrl, { 'User-Agent': userAgent });
+        let apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&ncode=${ncode}`;
+        console.log('Fetching metadata from Narou API...');
+        let apiResponse = await httpRequestWithRetry(apiUrl, { 'User-Agent': userAgent });
 
         let jsonData;
         try {
@@ -52,18 +52,43 @@ async function processSingleNovel(ncode, fetchType, episodesInput, userAgent) {
             throw e;
         }
 
+        let isR18 = false;
         if (!jsonData || jsonData.length < 2) {
-            throw new Error('Novel not found in Narou API.');
+            console.log('Novel not found in Narou API. Trying R18 API...');
+            apiUrl = `https://api.syosetu.com/novel18api/api/?out=json&ncode=${ncode}`;
+            apiResponse = await httpRequestWithRetry(apiUrl, { 'User-Agent': userAgent });
+            try {
+                jsonData = JSON.parse(apiResponse);
+            } catch (e) {
+                console.error('API Response Parse Error. Raw:', apiResponse.substring(0, 200));
+                throw e;
+            }
+            if (!jsonData || jsonData.length < 2) {
+                throw new Error('Novel not found in both Narou and R18 API.');
+            }
+            isR18 = true;
         }
 
         const novelInfo = jsonData[1];
+
+        // R18ジャンル名のマッピング
+        if (isR18 && novelInfo.nocgenre) {
+            const nocGenres = {
+                1: 'ノクターンノベルズ(男性向け)',
+                2: 'ムーンライトノベルズ(女性向け)',
+                3: 'ムーンライトノベルズ(BL)',
+                4: 'ミッドナイトノベルズ(大人向け)'
+            };
+            novelInfo.genre_name = nocGenres[novelInfo.nocgenre] || 'R18その他';
+        }
+
         const dirPath = path.join('storage', ncode);
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true });
         }
 
         fs.writeFileSync(path.join(dirPath, 'info.json'), JSON.stringify(novelInfo, null, 2));
-        console.log(`Saved metadata to ${dirPath}/info.json`);
+        console.log(`Saved metadata to ${dirPath}/info.json (isR18: ${isR18})`);
 
         // 2. 本文の取得 (スクレイピング)
         const chaptersPath = path.join(dirPath, 'chapters');
@@ -95,9 +120,10 @@ async function processSingleNovel(ncode, fetchType, episodesInput, userAgent) {
         console.log(`Target episodes count: ${targetEpisodes.length}`);
 
         for (const i of targetEpisodes) {
+            const domain = isR18 ? 'novel18.syosetu.com' : 'ncode.syosetu.com';
             const contentUrl = novelInfo.novel_type === 2
-                ? `https://ncode.syosetu.com/${ncode}/`
-                : `https://ncode.syosetu.com/${ncode}/${i}/`;
+                ? `https://${domain}/${ncode}/`
+                : `https://${domain}/${ncode}/${i}/`;
 
             console.log(`[${i}/${totalChapters}] Fetching: ${contentUrl}`);
 
@@ -304,7 +330,7 @@ function updateIndex(novelInfo) {
         ncode: novelInfo.ncode,
         title: novelInfo.title,
         writer: novelInfo.writer,
-        genre: novelInfo.genre,
+        genre: novelInfo.genre || novelInfo.nocgenre,
         added_at: new Date().toISOString(),
         total_episodes: novelInfo.general_all_no
     });

@@ -50,7 +50,11 @@ const GENRE_MAP = {
   '9903': 'エッセイ〔その他〕',
   '9904': 'リプレイ〔その他〕',
   '9999': 'その他〔その他〕',
-  '9801': 'ノンジャンル〔ノンジャンル〕'
+  '9801': 'ノンジャンル〔ノンジャンル〕',
+  '1': 'ノクターンノベルズ(男性向け)',
+  '2': 'ムーンライトノベルズ(女性向け)',
+  '3': 'ムーンライトノベルズ(BL)',
+  '4': 'ミッドナイトノベルズ(大人向け)'
 };
 
 /**
@@ -787,10 +791,11 @@ export default function Tsunovel() {
         <div className="relative min-h-screen overflow-hidden">
           {/* Background Image */}
           <div
-            className="fixed inset-0 z-0 bg-cover bg-center"
+            className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)`,
-              filter: 'none'
+              backgroundImage: `url(${import.meta.env.BASE_URL}pict/fantasy_library_bg.png)`,
+              filter: 'none',
+              imageRendering: 'auto'
             }}
           >
           </div>
