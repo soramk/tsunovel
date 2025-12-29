@@ -194,7 +194,8 @@ export default function Tsunovel() {
             status: 'unread',
             progress: 0,
             ncode: item.ncode,
-            content: null
+            content: null,
+            info: { genre: item.genre } // index.jsonからジャンルを初期化
           }));
           setNovels(loadedNovels);
         } else if (index && Array.isArray(index)) {
@@ -234,7 +235,7 @@ export default function Tsunovel() {
    */
   const loadNovelInfo = async (novelId) => {
     const novel = novels.find(n => n.id === novelId);
-    if (!novel || novel.info) return; // すでに取得済みなら何もしない
+    if (!novel || (novel.info && novel.info.story)) return;
 
     try {
       const ncodeLower = novel.ncode.toLowerCase();
@@ -773,10 +774,12 @@ export default function Tsunovel() {
         <div className="relative min-h-screen overflow-hidden">
           {/* Background Image */}
           <div
-            className="fixed inset-0 z-0 bg-cover bg-center transition-transform duration-[10s] hover:scale-105"
-            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)` }}
+            className="fixed inset-0 z-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)`,
+              filter: 'none'
+            }}
           >
-            <div className="absolute inset-0 bg-black/20"></div>
           </div>
 
           <div className="relative z-10 animate-in fade-in duration-1000">
@@ -1023,26 +1026,30 @@ export default function Tsunovel() {
                     </div>
 
                     <div className="space-y-1.5">
-                      {Object.entries(GENRE_MAP).filter(([id]) => id !== '0').map(([id, label]) => {
-                        const count = novels.filter(n => n.info?.genre?.toString() === id).length;
-                        if (count === 0) return null; // 現在ライブラリにあるジャンルのみ表示
+                      {/* ライブラリにある作品のジャンルを動的に抽出 */}
+                      {(() => {
+                        const activeGenres = [...new Set(novels.map(n => n.info?.genre?.toString()).filter(Boolean))];
+                        return activeGenres.sort().map(id => {
+                          const label = GENRE_MAP[id] || `ジャンル ${id}`;
+                          const count = novels.filter(n => n.info?.genre?.toString() === id).length;
 
-                        return (
-                          <button
-                            key={id}
-                            onClick={() => {
-                              setSelectedGenre(id);
-                              setIsSidebarOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all flex items-center justify-between group ${selectedGenre === id ? 'bg-blue-600/20 text-blue-400 font-bold border border-blue-500/30 shadow-[0_4px_15px_rgba(0,0,0,0.2)]' : 'text-[#d7ccc8]/40 hover:bg-white/5 hover:text-white'}`}
-                          >
-                            <span className="truncate pr-4 leading-relaxed">{label}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-mono transition-all ${selectedGenre === id ? 'bg-blue-500/20 border-blue-500/40 text-blue-200' : 'bg-white/5 border-white/5 opacity-40 group-hover:opacity-80'}`}>
-                              {count}
-                            </span>
-                          </button>
-                        );
-                      })}
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => {
+                                setSelectedGenre(id);
+                                setIsSidebarOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all flex items-center justify-between group ${selectedGenre === id ? 'bg-blue-600/20 text-blue-400 font-bold border border-blue-500/30 shadow-[0_4px_15px_rgba(0,0,0,0.2)]' : 'text-[#d7ccc8]/40 hover:bg-white/5 hover:text-white'}`}
+                            >
+                              <span className="truncate pr-4 leading-relaxed">{label}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-lg border font-mono transition-all ${selectedGenre === id ? 'bg-blue-500/20 border-blue-500/40 text-blue-200' : 'bg-white/5 border-white/5 opacity-40 group-hover:opacity-80'}`}>
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 </div>

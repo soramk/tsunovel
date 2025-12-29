@@ -291,6 +291,7 @@ function updateIndex(novelInfo) {
         ncode: novelInfo.ncode,
         title: novelInfo.title,
         writer: novelInfo.writer,
+        genre: novelInfo.genre,
         added_at: new Date().toISOString(),
         total_episodes: novelInfo.general_all_no
     });
