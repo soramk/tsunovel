@@ -880,7 +880,7 @@ export default function Tsunovel() {
                     <p className="text-sm">「召喚」から新しい物語を呼び出してください</p>
                   </div>
                 ) : (
-                  <div className="max-w-7xl mx-auto px-4 overflow-y-auto sm:overflow-x-auto pb-12 pt-8 custom-scrollbar scroll-smooth">
+                  <div className="max-w-7xl mx-auto px-4 pb-12 pt-8 custom-scrollbar">
                     {selectedGenre !== 'all' && (
                       <div className="mb-12 flex items-center justify-between wooden-frame p-4 rounded-xl animate-in fade-in slide-in-from-top-4 duration-500">
                         <div className="flex items-center gap-3">
@@ -898,7 +898,7 @@ export default function Tsunovel() {
                       </div>
                     )}
 
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-12 sm:gap-8 px-8 sm:min-w-max">
+                    <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 items-center sm:items-start gap-12 sm:gap-y-16 sm:gap-x-8 px-8">
                       {novels
                         .filter(novel => {
                           if (selectedGenre === 'all') return true;
@@ -914,9 +914,9 @@ export default function Tsunovel() {
                               style={{ animationDelay: `${index * 100}ms` }}
                             >
                               {/* Scroll (Makimono) UI - Responsive Orientation */}
-                              <div className="flex flex-row sm:flex-col items-center w-full sm:w-32 transition-transform duration-300 group-hover:-translate-y-2 sm:group-hover:-translate-y-4">
+                              <div className="flex flex-row sm:flex-col items-center w-full sm:w-40 transition-transform duration-300 group-hover:-translate-y-2 sm:group-hover:-translate-y-4">
                                 {/* Left/Top Handle */}
-                                <div className="w-4 sm:w-full h-24 sm:h-4 scroll-handle rounded-l-sm sm:rounded-t-sm sm:rounded-l-none"></div>
+                                <div className="w-4 sm:w-full h-24 sm:h-5 scroll-handle rounded-l-sm sm:rounded-t-sm sm:rounded-l-none"></div>
 
                                 {/* Content Body */}
                                 <div className="flex-1 sm:w-[90%] h-24 sm:h-64 scroll-body relative flex items-center justify-center p-4">
@@ -931,12 +931,12 @@ export default function Tsunovel() {
                                 </div>
 
                                 {/* Right/Bottom Handle */}
-                                <div className="w-4 sm:w-full h-24 sm:h-4 scroll-handle rounded-r-sm sm:rounded-b-sm sm:rounded-r-none"></div>
+                                <div className="w-4 sm:w-full h-24 sm:h-5 scroll-handle rounded-r-sm sm:rounded-b-sm sm:rounded-r-none"></div>
                               </div>
 
                               {/* Novel Info Label */}
-                              <div className="text-center w-full max-w-[128px]">
-                                <p className="text-[10px] text-amber-200/60 font-serif italic truncate">{novel.author}</p>
+                              <div className="text-center w-full sm:max-w-[160px]">
+                                <p className="text-[10px] text-amber-200/60 font-serif italic line-clamp-1">{novel.author}</p>
                               </div>
                             </div>
                           );
