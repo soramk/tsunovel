@@ -774,7 +774,7 @@ export default function Tsunovel() {
           {/* Background Image */}
           <div
             className="fixed inset-0 z-0 bg-cover bg-center transition-transform duration-[10s] hover:scale-105"
-            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}pict/new_library_bg.png)` }}
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)` }}
           >
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
           </div>
@@ -809,17 +809,7 @@ export default function Tsunovel() {
                   </div>
                 </div>
 
-                {/* Center: Logo */}
-                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 md:-top-12 pointer-events-none order-first md:order-none animate-float">
-                  <div className="logo-banner">
-                    <div className="logo-banner-shine"></div>
-                    <img
-                      src={`${import.meta.env.BASE_URL}pict/title.png`}
-                      alt="Tsunovel Logo"
-                      className="h-20 md:h-36 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] magical-glow relative z-10"
-                    />
-                  </div>
-                </div>
+                {/* Center: (Removed programmatic logo, now part of final_bg.png) */}
 
                 {/* Right Side: Action Buttons (Desktop) */}
                 <div className="hidden md:flex items-center gap-3">
