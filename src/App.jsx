@@ -741,7 +741,7 @@ export default function Tsunovel() {
       {viewMode === 'library' && (
         <div className="relative min-h-screen overflow-hidden">
           {/* Background Image */}
-          <div 
+          <div
             className="fixed inset-0 z-0 bg-cover bg-center transition-transform duration-[10s] hover:scale-105"
             style={{ backgroundImage: `url(${import.meta.env.BASE_URL}pict/fantasy_library_bg.png)` }}
           >
@@ -790,97 +790,96 @@ export default function Tsunovel() {
 
             <main className="max-w-7xl mx-auto px-4 pt-48 pb-12">
 
-            <div className="min-h-[400px]">
-              {isLoadingIndex ? (
-                <div className="flex flex-col items-center justify-center py-20 text-amber-100 gap-4">
-                  <Loader className="animate-spin" size={48} />
-                  <p className="font-serif italic text-lg magical-glow">魔導書架を整理中...</p>
-                </div>
-              ) : loadError ? (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                  <div className="wooden-frame rounded-xl p-8 max-w-sm">
-                    <X size={48} className="mx-auto mb-4 text-red-400" />
-                    <h3 className="text-xl font-bold text-white mb-2 font-serif">Error!</h3>
-                    <p className="text-red-200 text-sm mb-6">{loadError}</p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="px-6 py-2 bg-red-900/60 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-colors shadow-lg border border-red-500/30"
-                    >
-                      Retry
-                    </button>
+              <div className="min-h-[400px]">
+                {isLoadingIndex ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-amber-100 gap-4">
+                    <Loader className="animate-spin" size={48} />
+                    <p className="font-serif italic text-lg magical-glow">魔導書架を整理中...</p>
                   </div>
-                </div>
-              ) : novels.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-amber-100/60 text-center px-4">
-                  <Book size={48} className="mb-4 opacity-50" />
-                  <p className="font-serif italic text-xl mb-2">Shelf is empty.</p>
-                  <p className="text-sm">「召喚」から新しい物語を呼び出してください</p>
-                </div>
-              ) : (
-                <div className="max-w-7xl mx-auto px-4 overflow-x-auto pb-12 pt-8 custom-scrollbar">
-                  {selectedGenre !== 'all' && (
-                    <div className="mb-12 flex items-center justify-between wooden-frame p-4 rounded-xl animate-in fade-in slide-in-from-top-4 duration-500">
-                      <div className="flex items-center gap-3">
-                        <Filter size={20} className="text-amber-300" />
-                        <p className="text-lg font-serif font-bold text-amber-100">
-                          {GENRE_MAP[selectedGenre]}
-                        </p>
-                      </div>
+                ) : loadError ? (
+                  <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                    <div className="wooden-frame rounded-xl p-8 max-w-sm">
+                      <X size={48} className="mx-auto mb-4 text-red-400" />
+                      <h3 className="text-xl font-bold text-white mb-2 font-serif">Error!</h3>
+                      <p className="text-red-200 text-sm mb-6">{loadError}</p>
                       <button
-                        onClick={() => setSelectedGenre('all')}
-                        className="text-xs font-bold text-amber-200/50 hover:text-amber-200 transition-all bg-black/20 px-4 py-2 rounded-lg border border-amber-500/20"
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-2 bg-red-900/60 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-colors shadow-lg border border-red-500/30"
                       >
-                        全収蔵表示
+                        Retry
                       </button>
                     </div>
-                  )}
-
-                  <div className="flex items-start gap-8 px-8 min-w-max">
-                    {novels
-                      .filter(novel => selectedGenre === 'all' || novel.info?.genre?.toString() === selectedGenre)
-                      .map((novel, index) => {
-                        return (
-                          <div
-                            key={novel.id}
-                            onClick={() => setSelectedNovelId(novel.id)}
-                            className="group flex flex-col items-center gap-4 cursor-pointer animate-in fade-in slide-in-from-right-8 duration-500"
-                            style={{ animationDelay: `${index * 100}ms` }}
-                          >
-                            {/* Scroll (Makimono) UI */}
-                            <div className="flex flex-col items-center w-24 sm:w-32 transition-transform duration-300 group-hover:-translate-y-4">
-                              {/* Top Handle */}
-                              <div className="w-full h-4 scroll-handle rounded-t-sm"></div>
-                              
-                              {/* Content Body */}
-                              <div className="w-[90%] h-48 sm:h-64 scroll-body relative flex items-center justify-center p-4">
-                                <span className="text-sm sm:text-base font-serif font-bold text-[#5b4636] vertical-rl tracking-[0.2em] leading-relaxed line-clamp-2 text-center"
-                                      style={{ writingMode: 'vertical-rl' }}>
-                                  {novel.title}
-                                </span>
-                                
-                                {novel.status === 'reading' && (
-                                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
-                                )}
-                              </div>
-                              
-                              {/* Bottom Handle */}
-                              <div className="w-full h-4 scroll-handle rounded-b-sm"></div>
-                            </div>
-                            
-                            {/* Novel Info Label */}
-                            <div className="text-center w-full max-w-[128px]">
-                              <p className="text-[10px] text-amber-200/60 font-serif italic truncate">{novel.author}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
                   </div>
-                </div>
-              )}
-            </div>
-          </main>
-        </div>
-      )}
+                ) : novels.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-amber-100/60 text-center px-4">
+                    <Book size={48} className="mb-4 opacity-50" />
+                    <p className="font-serif italic text-xl mb-2">Shelf is empty.</p>
+                    <p className="text-sm">「召喚」から新しい物語を呼び出してください</p>
+                  </div>
+                ) : (
+                  <div className="max-w-7xl mx-auto px-4 overflow-y-auto sm:overflow-x-auto pb-12 pt-8 custom-scrollbar scroll-smooth">
+                    {selectedGenre !== 'all' && (
+                      <div className="mb-12 flex items-center justify-between wooden-frame p-4 rounded-xl animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="flex items-center gap-3">
+                          <Filter size={20} className="text-amber-300" />
+                          <p className="text-lg font-serif font-bold text-amber-100">
+                            {GENRE_MAP[selectedGenre]}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedGenre('all')}
+                          className="text-xs font-bold text-amber-200/50 hover:text-amber-200 transition-all bg-black/20 px-4 py-2 rounded-lg border border-amber-500/20"
+                        >
+                          全収蔵表示
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-12 sm:gap-8 px-8 sm:min-w-max">
+                      {novels
+                        .filter(novel => selectedGenre === 'all' || novel.info?.genre?.toString() === selectedGenre)
+                        .map((novel, index) => {
+                          return (
+                            <div
+                              key={novel.id}
+                              onClick={() => setSelectedNovelId(novel.id)}
+                              className="group flex flex-col items-center gap-4 cursor-pointer animate-in fade-in slide-in-from-right-8 duration-500"
+                              style={{ animationDelay: `${index * 100}ms` }}
+                            >
+                              {/* Scroll (Makimono) UI */}
+                              <div className="flex flex-col items-center w-24 sm:w-32 transition-transform duration-300 group-hover:-translate-y-4">
+                                {/* Top Handle */}
+                                <div className="w-full h-4 scroll-handle rounded-t-sm"></div>
+
+                                {/* Content Body */}
+                                <div className="w-[90%] h-48 sm:h-64 scroll-body relative flex items-center justify-center p-4">
+                                  <span className="text-sm sm:text-base font-serif font-bold text-[#5b4636] vertical-rl tracking-[0.2em] leading-relaxed line-clamp-2 text-center"
+                                    style={{ writingMode: 'vertical-rl' }}>
+                                    {novel.title}
+                                  </span>
+
+                                  {novel.status === 'reading' && (
+                                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+                                  )}
+                                </div>
+
+                                {/* Bottom Handle */}
+                                <div className="w-full h-4 scroll-handle rounded-b-sm"></div>
+                              </div>
+
+                              {/* Novel Info Label */}
+                              <div className="text-center w-full max-w-[128px]">
+                                <p className="text-[10px] text-amber-200/60 font-serif italic truncate">{novel.author}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </main>
+          </div>
 
           {/* --- Genre Sidebar / Drawer --- */}
           {isSidebarOpen && (
