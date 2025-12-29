@@ -577,26 +577,21 @@ export default function Tsunovel() {
       // GitHub Actionsをトリガー
       await triggerFetch(ncodeStr, githubConfig);
 
-      setDownloadProgress(`バックエンドで${ncodes.length}件を処理中... 完了まで最大1-3分かかります`);
+      setDownloadProgress(`バックエンドで${ncodes.length}件を処理中... 1件につき最大40分かかります`);
 
-      // 複数の小説を並列でポーリング
-      const results = await Promise.all(ncodes.map(async (ncode) => {
+      let successCount = 0;
+      let failCount = 0;
+
+      // 複数の小説を「順次」でポーリング（GitHub Actionsのキュー待ちに対応するため）
+      for (let i = 0; i < ncodes.length; i++) {
+        const ncode = ncodes[i];
+        setDownloadProgress(`召喚中 (${i + 1}/${ncodes.length}): ${ncode} を待機しています...`);
+
         try {
           const data = await pollData(ncode, githubConfig);
-          return { ncode, data, success: true };
-        } catch (err) {
-          console.error(`Error polling ${ncode}:`, err);
-          return { ncode, error: err.message, success: false };
-        }
-      }));
 
-      const successfulResults = results.filter(r => r.success);
-      const failedResults = results.filter(r => !r.success);
-
-      if (successfulResults.length > 0) {
-        const newNovelsList = successfulResults.map(res => {
-          const data = res.data;
-          return {
+          // 1件完了するごとに即座に追加
+          const newNovel = {
             id: Date.now() + Math.random(),
             title: data.title || 'タイトル不明',
             author: data.writer || data.author || '著者不明',
@@ -606,17 +601,21 @@ export default function Tsunovel() {
             content: data.story
               ? `【あらすじ】\n\n${data.story}\n\n\n※本文は小説家になろうのサイトで直接ご覧ください。`
               : '※本文は小説家になろうのサイトで直接ご覧ください。',
-            ncode: res.ncode
+            ncode: ncode
           };
-        });
 
-        setNovels(prev => [...newNovelsList, ...prev]);
+          setNovels(prev => [newNovel, ...prev]);
+          successCount++;
+        } catch (err) {
+          console.error(`Error polling ${ncode}:`, err);
+          failCount++;
+        }
       }
 
-      if (failedResults.length > 0) {
-        setDownloadProgress(`完了 (${successfulResults.length}件成功, ${failedResults.length}件失敗)`);
+      if (failCount > 0) {
+        setDownloadProgress(`一括召喚が完了しました (${successCount}件成功, ${failCount}件失敗)`);
       } else {
-        setDownloadProgress(`${successfulResults.length}件すべての読み込みが完了しました！`);
+        setDownloadProgress(`${successCount}件すべての召喚が完了しました！`);
         setIsAddModalOpen(false);
         setUrlInput('');
       }
