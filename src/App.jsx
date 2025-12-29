@@ -776,7 +776,7 @@ export default function Tsunovel() {
             className="fixed inset-0 z-0 bg-cover bg-center transition-transform duration-[10s] hover:scale-105"
             style={{ backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)` }}
           >
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+            <div className="absolute inset-0 bg-black/20"></div>
           </div>
 
           <div className="relative z-10 animate-in fade-in duration-1000">
