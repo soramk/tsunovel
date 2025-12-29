@@ -6,24 +6,54 @@
 /**
  * URLからncodeを抽出
  */
-export function extractNcode(url) {
-  // ncode.syosetu.com/n1234ab/ の形式
-  const match1 = url.match(/ncode\.syosetu\.com\/([a-z0-9]+)/i);
-  if (match1) return match1[1].toLowerCase();
+export function extractNcode(input) {
+  if (!input) return null;
 
-  // novel18.syosetu.com/n1234ab/ の形式（R18）
-  const match2 = url.match(/novel18\.syosetu\.com\/([a-z0-9]+)/i);
-  if (match2) return match2[1].toLowerCase();
+  // 改行や区切り文字で分割して処理
+  const items = input.split(/[\n\s,]+/).filter(Boolean);
+  const ncodes = [];
 
-  // その他の形式
-  const match3 = url.match(/syosetu\.com\/[^\/]*\/([a-z0-9]+)/i);
-  if (match3) return match3[1].toLowerCase();
+  for (const item of items) {
+    if (!item) continue;
 
-  // より柔軟なマッチング（nで始まる6文字のコード）
-  const match4 = url.match(/\/(n[a-z0-9]{5,})\//i);
-  if (match4) return match4[1].toLowerCase();
+    // 直接Nコードっぽい場合 (n+5〜6文字の英数字)
+    if (/^n[a-z0-9]{5,6}$/i.test(item)) {
+      ncodes.push(item.toLowerCase());
+      continue;
+    }
 
-  return null;
+    // ncode.syosetu.com/n1234ab/ の形式
+    const match1 = item.match(/ncode\.syosetu\.com\/([a-z0-9]+)/i);
+    if (match1) {
+      ncodes.push(match1[1].toLowerCase());
+      continue;
+    }
+
+    // novel18.syosetu.com/n1234ab/ の形式（R18）
+    const match2 = item.match(/novel18\.syosetu\.com\/([a-z0-9]+)/i);
+    if (match2) {
+      ncodes.push(match2[1].toLowerCase());
+      continue;
+    }
+
+    // その他の形式
+    const match3 = item.match(/syosetu\.com\/[^\/]*\/([a-z0-9]+)/i);
+    if (match3) {
+      ncodes.push(match3[1].toLowerCase());
+      continue;
+    }
+
+    // より柔軟なマッチング（nで始まる6文字のコード）
+    const match4 = item.match(/\/(n[a-z0-9]{5,})\//i);
+    if (match4) {
+      ncodes.push(match4[1].toLowerCase());
+      continue;
+    }
+  }
+
+  // 重複を削除
+  const uniqueNcodes = [...new Set(ncodes)];
+  return uniqueNcodes.length > 0 ? uniqueNcodes.join(',') : null;
 }
 
 /**

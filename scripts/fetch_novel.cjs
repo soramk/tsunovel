@@ -10,19 +10,33 @@ const zlib = require('zlib');
  * - 前書き・本文・後書きを正しく分離して取得
  */
 async function fetchNovel() {
-    const ncodeRaw = process.env.NCODE;
-    if (!ncodeRaw) {
+    const ncodesInput = process.env.NCODE || '';
+    if (!ncodesInput) {
         console.error('Error: NCODE environment variable is not set.');
         process.exit(1);
     }
-    const ncode = ncodeRaw.toLowerCase();
+    const ncodes = ncodesInput.split(',').map(n => n.trim().toLowerCase()).filter(n => n);
     const fetchType = process.env.FETCH_TYPE || 'full'; // 'full', 'specific', 'new'
     const episodesInput = process.env.EPISODES || '';
 
     // ブラウザに近いUser-Agentに設定
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-    console.log(`--- Start Fetching: ${ncode} (Type: ${fetchType}, Episodes: ${episodesInput}) ---`);
+    console.log(`--- Start Fetching (Mode: ${fetchType}, Episodes: ${episodesInput}) ---`);
+    console.log(`NCODEs to process: ${ncodes.join(', ')}`);
+
+    for (const ncode of ncodes) {
+        console.log(`\n>>> Processing: ${ncode} <<<`);
+        try {
+            await processSingleNovel(ncode, fetchType, episodesInput, userAgent);
+        } catch (err) {
+            console.error(`!!! Failed to process ${ncode}:`, err.message);
+            // 1つの小説が失敗しても次へ進む
+        }
+    }
+}
+
+async function processSingleNovel(ncode, fetchType, episodesInput, userAgent) {
 
     try {
         // 1. メタデータの取得 (なろうAPI)
@@ -198,9 +212,8 @@ async function fetchNovel() {
             if (targetEpisodes.length > 1) await new Promise(r => setTimeout(r, 1000));
         }
 
-        // 3. インデックスの更新
         updateIndex(novelInfo);
-        console.log('--- All Process Completed ---');
+        console.log(`>>> Completed: ${ncode} <<<`);
 
     } catch (error) {
         console.error('--- Fatal Error ---');

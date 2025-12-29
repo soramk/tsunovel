@@ -4,6 +4,10 @@ on:
   repository_dispatch:
     types: [fetch-novel]
 
+concurrency:
+  group: fetch-novel
+  cancel-in-progress: false
+
 jobs:
   fetch:
     runs-on: ubuntu-latest

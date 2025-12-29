@@ -564,55 +564,69 @@ export default function Tsunovel() {
     setDownloadProgress('小説情報を取得中...');
 
     try {
-      console.log('Fetching novel from URL:', urlInput);
+      console.log('Extracting NCODEs from input:', urlInput);
 
-      const ncode = extractNcode(urlInput);
-      if (!ncode) {
-        throw new Error('小説家になろうのURLからNコードを抽出できませんでした');
+      const ncodeStr = extractNcode(urlInput);
+      if (!ncodeStr) {
+        throw new Error('入力からNコードを抽出できませんでした');
       }
 
-      setDownloadProgress('GitHub Actionsを起動中...');
+      const ncodes = ncodeStr.split(',');
+      setDownloadProgress(`${ncodes.length}件の小説を召喚中... GitHub Actionsを起動しています`);
 
       // GitHub Actionsをトリガー
-      await triggerFetch(ncode, githubConfig);
+      await triggerFetch(ncodeStr, githubConfig);
 
-      setDownloadProgress('バックエンドで処理中... 完了まで最大1-2分かかります。');
+      setDownloadProgress(`バックエンドで${ncodes.length}件を処理中... 完了まで最大1-3分かかります`);
 
-      // 結果をポーリング
-      const data = await pollData(ncode, githubConfig);
+      // 複数の小説を並列でポーリング
+      const results = await Promise.all(ncodes.map(async (ncode) => {
+        try {
+          const data = await pollData(ncode, githubConfig);
+          return { ncode, data, success: true };
+        } catch (err) {
+          console.error(`Error polling ${ncode}:`, err);
+          return { ncode, error: err.message, success: false };
+        }
+      }));
 
-      console.log('Novel data fetched via GitHub Actions:', data);
-      setDownloadProgress('ライブラリに追加中...');
+      const successfulResults = results.filter(r => r.success);
+      const failedResults = results.filter(r => !r.success);
 
-      const newNovel = {
-        id: Date.now(),
-        title: data.title || 'タイトル不明',
-        author: data.writer || data.author || '著者不明',
-        site: '小説家になろう',
-        status: 'unread',
-        progress: 0,
-        content: data.story
-          ? `【あらすじ】\n\n${data.story}\n\n\n※本文は小説家になろうのサイトで直接ご覧ください。\nURL: ${urlInput}`
-          : '※本文は小説家になろうのサイトで直接ご覧ください。',
-        url: urlInput,
-        ncode: ncode
-      };
+      if (successfulResults.length > 0) {
+        const newNovelsList = successfulResults.map(res => {
+          const data = res.data;
+          return {
+            id: Date.now() + Math.random(),
+            title: data.title || 'タイトル不明',
+            author: data.writer || data.author || '著者不明',
+            site: '小説家になろう',
+            status: 'unread',
+            progress: 0,
+            content: data.story
+              ? `【あらすじ】\n\n${data.story}\n\n\n※本文は小説家になろうのサイトで直接ご覧ください。`
+              : '※本文は小説家になろうのサイトで直接ご覧ください。',
+            ncode: res.ncode
+          };
+        });
 
-      setNovels([newNovel, ...novels]);
-      setIsAddModalOpen(false);
-      setUrlInput('');
-      setDownloadProgress('');
-      setIsDownloading(false);
+        setNovels(prev => [...newNovelsList, ...prev]);
+      }
+
+      if (failedResults.length > 0) {
+        setDownloadProgress(`完了 (${successfulResults.length}件成功, ${failedResults.length}件失敗)`);
+      } else {
+        setDownloadProgress(`${successfulResults.length}件すべての読み込みが完了しました！`);
+        setIsAddModalOpen(false);
+        setUrlInput('');
+      }
+
+      setTimeout(() => setIsDownloading(false), 5000);
     } catch (error) {
       console.error('Error downloading novel:', error);
       const errorMessage = error.message || '不明なエラーが発生しました';
       setDownloadProgress(`エラー: ${errorMessage}`);
-
-      // エラーメッセージは既にUIに表示されているため、5秒後にリセット
-      setTimeout(() => {
-        setIsDownloading(false);
-        // エラーメッセージは残しておく（ユーザーが確認できるように）
-      }, 5000);
+      setTimeout(() => setIsDownloading(false), 5000);
     }
   };
 
@@ -1815,20 +1829,17 @@ export default function Tsunovel() {
                         小説のURLを詠唱
                       </label>
                       <div className="relative group">
-                        <input
-                          type="url"
-                          placeholder="https://ncode.syosetu.com/..."
-                          className="w-full pl-12 pr-4 py-4 rounded-2xl border border-[#2c3e50] bg-[#141d26] text-white placeholder:text-slate-700 outline-none focus:border-blue-500/50 transition-all shadow-inner disabled:opacity-50"
+                        <textarea
+                          placeholder="https://ncode.syosetu.com/n1234ab/&#10;https://ncode.syosetu.com/n5678cd/"
+                          className="w-full pl-4 pr-4 py-4 rounded-2xl border border-[#2c3e50] bg-[#141d26] text-white placeholder:text-slate-700 outline-none focus:border-blue-500/50 transition-all shadow-inner disabled:opacity-50 min-h-[120px] resize-none scrollbar-hide"
                           value={urlInput}
                           onChange={(e) => setUrlInput(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleUrlDownload()}
                           disabled={isDownloading}
                           autoFocus
                         />
-                        <Link className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-blue-400 transition-colors" size={20} />
                       </div>
                       <p className="text-[10px] text-slate-500 mt-3 font-serif italic px-2 leading-relaxed">
-                        ※ 小説家になろう(ncode.syosetu.com)の作品に対応しています。魔力プロキシ経由で収蔵を開始します。
+                        ※ 改行またはカンマ区切りで複数のURLを入力できます。
                       </p>
 
                       <div className="mt-6 p-5 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-center justify-between group hover:bg-blue-500/10 transition-all duration-300">
