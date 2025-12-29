@@ -793,7 +793,7 @@ export default function Tsunovel() {
           <div
             className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: `url(${import.meta.env.BASE_URL}pict/fantasy_library_bg.png)`,
+              backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)`,
               filter: 'none',
               imageRendering: 'auto'
             }}
