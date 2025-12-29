@@ -810,12 +810,13 @@ export default function Tsunovel() {
                 </div>
 
                 {/* Center: Logo */}
-                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 md:-top-4 pointer-events-none order-first md:order-none animate-float">
+                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 md:-top-12 pointer-events-none order-first md:order-none animate-float">
                   <div className="logo-banner">
+                    <div className="logo-banner-shine"></div>
                     <img
                       src={`${import.meta.env.BASE_URL}pict/title.png`}
                       alt="Tsunovel Logo"
-                      className="h-24 md:h-40 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] magical-glow"
+                      className="h-20 md:h-36 w-auto drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] magical-glow relative z-10"
                     />
                   </div>
                 </div>
