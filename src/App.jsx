@@ -750,18 +750,36 @@ export default function Tsunovel() {
 
           <div className="relative z-10 animate-in fade-in duration-1000">
             <header className="pt-8 px-6">
-              <div className="max-w-6xl mx-auto flex justify-between items-start">
+              <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-0">
                 {/* Left Side: Genre Button */}
-                <button
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="wooden-frame p-4 rounded-lg flex items-center gap-3 group active:scale-95 transition-transform"
-                >
-                  <Menu size={24} className="text-amber-200 group-hover:rotate-90 transition-transform" />
-                  <span className="text-amber-100 font-serif font-bold text-sm hidden sm:inline tracking-widest">目録を開く</span>
-                </button>
+                <div className="flex w-full md:w-auto justify-between items-center md:justify-start gap-4">
+                  <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="wooden-frame p-4 rounded-lg flex items-center gap-3 group active:scale-95 transition-transform"
+                  >
+                    <Menu size={24} className="text-amber-200 group-hover:rotate-90 transition-transform" />
+                    <span className="text-amber-100 font-serif font-bold text-sm hidden sm:inline tracking-widest">目録を開く</span>
+                  </button>
+
+                  {/* Right Side Action Buttons moved inside for mobile layout */}
+                  <div className="flex md:hidden items-center gap-3">
+                    <button
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="wooden-frame h-14 px-4 rounded-lg flex items-center gap-2 group active:scale-95 transition-transform"
+                    >
+                      <Plus size={20} className="text-amber-200 group-hover:scale-125 transition-transform" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('settings')}
+                      className="wooden-frame p-4 rounded-lg flex items-center group active:scale-95 transition-transform"
+                    >
+                      <Settings size={20} className="text-amber-200 group-hover:rotate-45 transition-transform" />
+                    </button>
+                  </div>
+                </div>
 
                 {/* Center: Logo */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-4 md:top-8 pointer-events-none">
+                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 md:top-4 pointer-events-none order-first md:order-none">
                   <img
                     src={`${import.meta.env.BASE_URL}pict/title.png`}
                     alt="Tsunovel Logo"
@@ -769,8 +787,8 @@ export default function Tsunovel() {
                   />
                 </div>
 
-                {/* Right Side: Action Buttons */}
-                <div className="flex items-center gap-3">
+                {/* Right Side: Action Buttons (Desktop) */}
+                <div className="hidden md:flex items-center gap-3">
                   <button
                     onClick={() => setIsAddModalOpen(true)}
                     className="wooden-frame h-14 px-6 rounded-lg flex items-center gap-2 group active:scale-95 transition-transform"
@@ -843,18 +861,18 @@ export default function Tsunovel() {
                             <div
                               key={novel.id}
                               onClick={() => setSelectedNovelId(novel.id)}
-                              className="group flex flex-col items-center gap-4 cursor-pointer animate-in fade-in slide-in-from-right-8 duration-500"
+                              className="group flex flex-col sm:flex-col items-center gap-4 cursor-pointer animate-in fade-in slide-in-from-right-8 duration-500 w-full sm:w-auto"
                               style={{ animationDelay: `${index * 100}ms` }}
                             >
-                              {/* Scroll (Makimono) UI */}
-                              <div className="flex flex-col items-center w-24 sm:w-32 transition-transform duration-300 group-hover:-translate-y-4">
-                                {/* Top Handle */}
-                                <div className="w-full h-4 scroll-handle rounded-t-sm"></div>
+                              {/* Scroll (Makimono) UI - Responsive Orientation */}
+                              <div className="flex flex-row sm:flex-col items-center w-full sm:w-32 transition-transform duration-300 group-hover:-translate-y-2 sm:group-hover:-translate-y-4">
+                                {/* Left/Top Handle */}
+                                <div className="w-4 sm:w-full h-24 sm:h-4 scroll-handle rounded-l-sm sm:rounded-t-sm sm:rounded-l-none"></div>
 
                                 {/* Content Body */}
-                                <div className="w-[90%] h-48 sm:h-64 scroll-body relative flex items-center justify-center p-4">
-                                  <span className="text-sm sm:text-base font-serif font-bold text-[#5b4636] vertical-rl tracking-[0.2em] leading-relaxed line-clamp-2 text-center"
-                                    style={{ writingMode: 'vertical-rl' }}>
+                                <div className="flex-1 sm:w-[90%] h-24 sm:h-64 scroll-body relative flex items-center justify-center p-4">
+                                  <span className="text-sm sm:text-base font-serif font-bold text-[#5b4636] sm:vertical-rl tracking-[0.1em] sm:tracking-[0.2em] leading-relaxed line-clamp-2 text-center"
+                                    style={{ writingMode: window.innerWidth < 640 ? 'horizontal-tb' : 'vertical-rl' }}>
                                     {novel.title}
                                   </span>
 
@@ -863,8 +881,8 @@ export default function Tsunovel() {
                                   )}
                                 </div>
 
-                                {/* Bottom Handle */}
-                                <div className="w-full h-4 scroll-handle rounded-b-sm"></div>
+                                {/* Right/Bottom Handle */}
+                                <div className="w-4 sm:w-full h-24 sm:h-4 scroll-handle rounded-r-sm sm:rounded-b-sm sm:rounded-r-none"></div>
                               </div>
 
                               {/* Novel Info Label */}
