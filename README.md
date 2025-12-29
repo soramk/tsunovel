@@ -1,59 +1,50 @@
 # Tsunovel - Web Novel Reader App
 
-Web小説を収集（積ん読）し、自分好みの快適な環境で読むためのリーダーアプリのプロトタイプです。
+Web小説を収集（積ん読）し、自分好みの快適な環境で読むためのリーダーアプリです。
 
 ## コンセプト
 
-「集める楽しさ」と「没頭できる読書体験」の両立を目指しています。特にライブラリ画面では、物理的な本棚から本を取り出して開くようなリッチなアニメーション体験を重視しています。
-
-## 技術スタック
-
-- **Framework**: React (Functional Components, Hooks)
-- **Styling**: Tailwind CSS
-- **Icons**: lucide-react
-- **Build Tool**: Vite
+「集める楽しさ」と「没頭できる読書体験」の両立を目指しています。ライブラリ画面では、魔法のアーカイブから巻物を取り出すような幻想的な体験を、リーダー画面では装飾を削ぎ落とした純粋な読書体験を提供します。
 
 ## 主な機能
 
 ### 1. ライブラリ画面 (Library View)
 
-- **3Dブック表現**: CSS 3D Transformsを使用した物理的な本のレンダリング
-- **インタラクション**:
-  - ホバー時: 本が少し浮き上がり、手前に傾く
-  - クリック時: 本が取り出され、表紙がめくれるアニメーション後にリーダー画面へ遷移
-- **デザイン**: ダークブラウンを基調とした木製の本棚風デザイン
+- **Makimono UI**: 小説を「巻物」として表現した幻想的なデザイン
+- **マルチデバイス・レイアウト**:
+  - **Desktop**: 多数の作品を一覧できるレスポンシブな多段グリッド表示
+  - **Mobile**: 横スクロールによる直感的なブラウジング
+- **フィルタリング**: ジャンル別、または「お気に入り」による絞り込み機能
 
 ### 2. リーダー画面 (Reader View)
 
 - **没頭モード**: ヘッダー以外の装飾を排除した読書環境
-- **カスタマイズ機能**:
-  - テーマ切り替え: ライト / セピア / ダーク
-  - フォント切り替え: 明朝体 / ゴシック体
-  - 文字サイズ変更: 小 / 中 / 大
+- **高度なカスタマイズ**:
+  - **テーマ**: ライト / セピア / ダーク / 珈琲 / ミッドナイト 等、多彩なテーマを用意
+  - **フォント**: 明朝体 / ゴシック体 / Noto Serif / Zen Kaku 等、多数のWebフォントに対応
+  - **調整項目**: 文字サイズ、行間、背景色、文字色の詳細な設定
+- **しおり機能**: 最後に読んだ位置を作品ごとに自動保存
 
-### 3. 検索・追加機能
+### 3. 小説取得・同期機能 (GitHub Actions 連携)
 
-- モーダルからキーワード検索
-- ダミーデータベースから検索結果を表示
-- 検索結果をクリックしてライブラリに追加
+- **なろう/R18対応**: 「小説家になろう」および「ノクターン/ムーンライト/ミッドナイトノベルズ」に対応
+- **自動エピソード取得**: GitHub Actions を使用して、バックグラウンドで最新エピソードまで自動収集
+- **同期機能**: 既存作品の更新チェック、未取得話のみの差分取得、特定話の再取得が可能
 
-### 4. Web小説ダウンロード機能
+## 技術スタック
 
-- **URL入力**: Web小説サイトのURLを入力して小説をダウンロード
-- **対応サイト**: 
-  - **小説家になろう** (syosetu.com) - 公式APIを使用してメタ情報を取得
-  - カクヨム (kakuyomu.jp)
-  - その他のWeb小説サイト（汎用パーサー）
-- **自動取得**: タイトル、著者、本文を自動で取得
-- **バックエンドAPI**: サーバーレス関数（Vercel Functions）を使用
-- **なろう小説API**: [小説家になろう公式API](https://dev.syosetu.com/man/api/)を使用
+- **Frontend**: React, Vite
+- **Styling**: Tailwind CSS
+- **Icons**: lucide-react (Lucide)
+- **Backend Automation**: GitHub Actions
+- **Data Source**: なろう小説API (通常 / R18)
 
 ## セットアップ
 
 ### 必要な環境
 
-- Node.js (v16以上推奨)
-- npm または yarn
+- Node.js (v18以上推奨)
+- GitHub リポジトリ（Actions を使用する場合）
 
 ### インストール
 
@@ -63,122 +54,36 @@ npm install
 
 # 開発サーバーの起動
 npm run dev
-
-# ビルド
-npm run build
-
-# ビルド結果のプレビュー
-npm run preview
 ```
+
+## GitHub Actions の設定 (重要)
+
+小説を実際に取得・保存するには、GitHub Actions の設定が必要です。
+
+1. **PAT (Personal Access Token) の作成**:
+   - `repo` 権限を持つ PAT を作成します。
+2. **Web UI での設定**:
+   - 右上の設定アイコンから、GitHub の Owner 名、Repository 名、PAT を入力して保存します。
+3. **小説の追加**:
+   - 「召喚（追加）」ボタンから URL を入力すると、GitHub Actions が起動し、小説データが `storage/` フォルダに自動的に蓄積されます。
 
 ## プロジェクト構造
 
 ```
 tsunovel/
 ├── src/
-│   ├── App.jsx          # メインコンポーネント
-│   ├── main.jsx         # Reactエントリーポイント
-│   └── index.css        # Tailwind CSS設定
-├── storage/             # 小説データ保存先（非公開推奨）
+│   ├── App.jsx          # メインコンポーネント (ライブラリ & リーダー)
+│   ├── utils/
+│   │   ├── githubActions.js # API連携・Actionsトリガー
+│   │   └── novelFetcher.js  # URL解析・なろう検索
+│   └── index.css        # デザインシステム (Fantasy UI)
+├── storage/             # 取得済み小説データの保存先 (JSON/Text)
 ├── scripts/
-│   └── fetch_novel.cjs  # 小説取得スクリプト（GitHub Actions用）
-├── .github/
-│   └── workflows/       # GitHub Actions設定
-├── index.html           # HTMLエントリーポイント
-├── package.json         # 依存関係
-├── vite.config.js       # Vite設定
-└── tailwind.config.js   # Tailwind CSS設定
+│   └── fetch_novel.cjs  # 小説取得エンジンスクリプト
+└── .github/
+    └── workflows/       # GitHub Actions ワークフロー定義
 ```
-
-## データ構造
-
-```javascript
-const novel = {
-  id: number,
-  title: string,
-  author: string,
-  site: string,        // 出典サイト名
-  status: 'unread' | 'reading' | 'completed',
-  progress: number,    // 0-100
-  content: string      // 本文
-};
-```
-
-## GitHub Pagesでの公開
-
-このプロジェクトはGitHub Pagesで自動デプロイされるように設定されています。
-
-### デプロイ手順
-
-1. **リポジトリの設定**
-   - GitHubリポジトリの Settings > Pages に移動
-   - Source を "GitHub Actions" に設定
-
-2. **自動デプロイ**
-   - `main`ブランチにプッシュすると、自動的にビルドとデプロイが実行されます
-   - デプロイの進行状況は Actions タブで確認できます
-
-3. **公開URL**
-   - デプロイ完了後、以下のURLでアクセスできます：
-   - `https://[あなたのユーザー名].github.io/tsunovel/`
-
-### 手動デプロイ（オプション）
-
-自動デプロイを使わない場合：
-
-```bash
-# ビルド
-npm run build
-
-# gh-pagesパッケージを使用する場合
-npm install -g gh-pages
-gh-pages -d dist
-```
-
-**注意**: `vite.config.js`の`base`設定がリポジトリ名（`/tsunovel/`）に合わせて設定されています。リポジトリ名が異なる場合は、`vite.config.js`の`base`を変更してください。
-
-## Web小説ダウンロード機能
-
-### 概要
-
-フロントエンドから直接小説家になろうの公式APIを使用して小説情報を取得します。**バックエンドAPIは不要**です。
-
-### 対応サイト
-
-- **小説家になろう** (syosetu.com) - 公式APIを使用
-- その他のサイトはCORS制限により現在サポートされていません
-
-### 使用方法
-
-1. 「小説を追加」ボタンをクリック
-2. 「URL」タブを選択
-3. 小説家になろうのURLを入力（例: `https://ncode.syosetu.com/n1234ab/`）
-4. 「小説をダウンロード」ボタンをクリック
-
-### 取得できる情報
-
-- タイトル
-- 著者名
-- あらすじ
-- 初回掲載日
-- 最終掲載日
-- ジャンル
-
-**注意**: 本文は取得できません（CORS制限のため）。あらすじとURLが表示されます。
-
-### 技術詳細
-
-- **API**: [小説家になろう公式API](https://dev.syosetu.com/man/api/)
-- **実装**: フロントエンドから直接APIを呼び出し（`src/utils/novelFetcher.js`）
-- **CORS**: 小説家になろうのAPIはCORSを許可しているため、ブラウザから直接アクセス可能
-
-### 注意事項
-
-- **利用規約**: 小説家になろうの利用規約を確認し、遵守してください
-- **レート制限**: APIの利用制限（1日80,000リクエストまたは400MB）に注意してください
-- **CORSエラー**: 他のサイトから取得する場合はCORSエラーが発生します
 
 ## ライセンス
 
-このプロジェクトはプロトタイプです。
-
+このプロジェクトはプロトタイプです。利用規約等を遵守してご利用ください。
