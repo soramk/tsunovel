@@ -103,5 +103,31 @@
   .animate-float {
     animation: float 5s ease-in-out infinite;
   }
+
+  .logo-banner {
+    position: relative;
+    background: linear-gradient(to bottom, #1a2533 0%, #101824 100%);
+    border-left: 2px solid #c9a35d;
+    border-right: 2px solid #c9a35d;
+    border-top: 2px solid #c9a35d;
+    padding: 20px 40px 40px 40px;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 90%, 50% 100%, 0% 90%);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(201, 163, 93, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 200px;
+  }
+
+  .logo-banner::after {
+    content: '';
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #c9a35d, transparent);
+    opacity: 0.5;
+  }
 }
 
