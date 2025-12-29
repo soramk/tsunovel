@@ -88,8 +88,33 @@ export default function Tsunovel() {
   const [updateEpisodesInput, setUpdateEpisodesInput] = useState('');
 
   // フィルタリング用ステート
-  const [selectedGenre, setSelectedGenre] = useState('all');
+  const [selectedGenre, setSelectedGenre] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_selected_genre');
+    return saved || 'all';
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // お気に入り & 読書履歴
+  const [favorites, setFavorites] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('tsunovel_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem('tsunovel_history', JSON.stringify(history));
+  }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem('tsunovel_selected_genre', selectedGenre);
+  }, [selectedGenre]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -253,6 +278,12 @@ export default function Tsunovel() {
     // 常に指定された話数（またはしおり）からロードして readerChapters を初期化する
     setOpeningBookId(novelId);
     await loadChapter(novelId, startChapter);
+
+    // 履歴に追加
+    setHistory(prev => {
+      const filtered = prev.filter(id => id !== novelId);
+      return [novelId, ...filtered].slice(0, 20); // 最大20件
+    });
 
     // 1.5秒後に画面遷移
     setTimeout(() => {
@@ -841,7 +872,7 @@ export default function Tsunovel() {
                         <div className="flex items-center gap-3">
                           <Filter size={20} className="text-amber-300" />
                           <p className="text-lg font-serif font-bold text-amber-100">
-                            {GENRE_MAP[selectedGenre]}
+                            {selectedGenre === 'favorites' ? 'お気に入り作品' : (GENRE_MAP[selectedGenre] || '不明なジャンル')}
                           </p>
                         </div>
                         <button
@@ -855,7 +886,11 @@ export default function Tsunovel() {
 
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-12 sm:gap-8 px-8 sm:min-w-max">
                       {novels
-                        .filter(novel => selectedGenre === 'all' || novel.info?.genre?.toString() === selectedGenre)
+                        .filter(novel => {
+                          if (selectedGenre === 'all') return true;
+                          if (selectedGenre === 'favorites') return favorites.includes(novel.id);
+                          return novel.info?.genre?.toString() === selectedGenre;
+                        })
                         .map((novel, index) => {
                           return (
                             <div
@@ -941,7 +976,51 @@ export default function Tsunovel() {
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent"></div>
                       )}
                     </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedGenre('favorites');
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`w-full text-left px-5 py-4 rounded-2xl text-sm transition-all flex items-center justify-between group relative overflow-hidden ${selectedGenre === 'favorites' ? 'bg-pink-600/20 text-pink-400 font-bold border border-pink-500/30' : 'text-[#d7ccc8]/50 hover:bg-white/5 hover:text-white'}`}
+                    >
+                      <span className="flex items-center gap-4 relative z-10">
+                        <Bookmark size={18} className={selectedGenre === 'favorites' ? 'text-pink-300' : 'opacity-30 group-hover:opacity-100'} />
+                        <span>お気に入り</span>
+                      </span>
+                      <span className="text-[10px] opacity-40 font-mono relative z-10">{favorites.length}</span>
+                    </button>
                   </div>
+
+                  {/* 最近読んだ作品 */}
+                  {history.length > 0 && (
+                    <div>
+                      <div className="mb-4 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <div className="h-[1px] flex-1 bg-slate-700/30"></div>
+                        <span>最近読んだ作品</span>
+                        <div className="h-[1px] flex-1 bg-slate-700/30"></div>
+                      </div>
+                      <div className="space-y-2">
+                        {history.slice(0, 5).map(id => {
+                          const novel = novels.find(n => n.id === id);
+                          if (!novel) return null;
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => {
+                                setSelectedNovelId(id);
+                                setIsSidebarOpen(false);
+                              }}
+                              className="w-full text-left px-4 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/5 hover:text-white transition-all truncate flex items-center gap-3"
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></div>
+                              <span className="truncate">{novel.title}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <div className="mb-4 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -953,7 +1032,7 @@ export default function Tsunovel() {
                     <div className="space-y-1.5">
                       {Object.entries(GENRE_MAP).filter(([id]) => id !== '0').map(([id, label]) => {
                         const count = novels.filter(n => n.info?.genre?.toString() === id).length;
-                        if (count === 0 && selectedGenre !== id) return null;
+                        if (count === 0) return null; // 現在ライブラリにあるジャンルのみ表示
 
                         return (
                           <button
@@ -1010,9 +1089,25 @@ export default function Tsunovel() {
                 <div className="flex-1 p-6 sm:p-8 flex flex-col">
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex-1">
-                      <h3 className="text-2xl font-serif font-bold mb-2 leading-tight text-white">
-                        {novels.find(n => n.id === selectedNovelId)?.title}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-2xl font-serif font-bold leading-tight text-white">
+                          {novels.find(n => n.id === selectedNovelId)?.title}
+                        </h3>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const isFav = favorites.includes(selectedNovelId);
+                            if (isFav) {
+                              setFavorites(prev => prev.filter(id => id !== selectedNovelId));
+                            } else {
+                              setFavorites(prev => [...prev, selectedNovelId]);
+                            }
+                          }}
+                          className={`p-2 rounded-full transition-all ${favorites.includes(selectedNovelId) ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:text-pink-400 hover:bg-white/5'}`}
+                        >
+                          <Bookmark size={20} fill={favorites.includes(selectedNovelId) ? "currentColor" : "none"} />
+                        </button>
+                      </div>
                       <p className="text-sm text-blue-300 opacity-80 italic font-serif">{novels.find(n => n.id === selectedNovelId)?.author}</p>
                     </div>
                     <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white">
