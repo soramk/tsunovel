@@ -49,7 +49,7 @@ export async function pollData(ncode, config) {
         }
     } : {};
 
-    const maxRetries = 24; // 24 * 5s = 120s (2 minutes)
+    const maxRetries = 480; // 480 * 5s = 2400s (40 minutes)
     let retries = 0;
 
     return new Promise((resolve, reject) => {
