@@ -1,0 +1,45 @@
+name: Remove Novel
+
+on:
+  repository_dispatch:
+    types: [remove-novel]
+
+concurrency:
+  group: remove-novel
+  cancel-in-progress: false
+
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Remove Novel Data
+        env:
+          NCODE: ${{ github.event.client_payload.ncode }}
+        run: node scripts/remove_novel.cjs
+
+      - name: Commit & Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add storage/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "storage: remove novel data for ${{ github.event.client_payload.ncode }}"
+            git pull --rebase origin main
+            git push origin main
+          fi

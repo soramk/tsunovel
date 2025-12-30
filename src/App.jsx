@@ -26,7 +26,7 @@ import {
   Filter
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
-import { triggerFetch, pollData, fetchIndex } from './utils/githubActions';
+import { triggerFetch, triggerRemove, pollData, fetchIndex } from './utils/githubActions';
 
 const GENRE_MAP = {
   '0': '未選択〔未選択〕',
@@ -474,6 +474,59 @@ export default function Tsunovel() {
     } catch (error) {
       console.error('Error syncing novel:', error);
       setDownloadProgress(`同期エラー: ${error.message}`);
+      setTimeout(() => setIsDownloading(false), 5000);
+    }
+  };
+
+  /**
+   * 小説を削除する
+   */
+  const handleRemoveNovel = async (novelId) => {
+    const novel = novels.find(n => n.id === novelId);
+    if (!novel) return;
+
+    if (!window.confirm(`「${novel.title}」をライブラリから完全に削除しますか？\nこの操作は取り消せません。`)) {
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadProgress(`${novel.title} を削除中...`);
+    setSelectedNovelId(null);
+
+    try {
+      // GitHub Actionsをトリガー（削除用）
+      await triggerRemove(novel.ncode, githubConfig);
+
+      setDownloadProgress('削除処理をリクエストしました。完了後に一覧を更新します。');
+
+      // 10秒待ってから一覧を再取得（GitHub Actionsの反映待ち）
+      setTimeout(async () => {
+        try {
+          const index = await fetchIndex(githubConfig);
+          if (index && Array.isArray(index)) {
+            const loadedNovels = index.map(item => ({
+              id: item.ncode,
+              title: item.title,
+              author: item.writer,
+              site: '小説家になろう',
+              status: 'unread',
+              progress: 0,
+              ncode: item.ncode,
+              content: null,
+              info: { genre: item.genre }
+            }));
+            setNovels(loadedNovels);
+          }
+        } catch (e) {
+          console.error('Failed to refresh index after removal:', e);
+        }
+        setIsDownloading(false);
+        setDownloadProgress('');
+      }, 10000);
+
+    } catch (error) {
+      console.error('Error removing novel:', error);
+      setDownloadProgress(`削除エラー: ${error.message}`);
       setTimeout(() => setIsDownloading(false), 5000);
     }
   };
@@ -1170,6 +1223,15 @@ export default function Tsunovel() {
                       >
                         <Loader size={16} className={isDownloading ? 'animate-spin' : ''} />
                         更新設定
+                      </button>
+
+                      <button
+                        onClick={() => handleRemoveNovel(selectedNovelId)}
+                        className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-red-900/30 text-red-400/50 hover:border-red-500 hover:text-red-500 transition-all font-bold text-sm"
+                        title="この本を削除"
+                      >
+                        <X size={16} />
+                        削除
                       </button>
 
                       {isUpdateOptionsOpen && (

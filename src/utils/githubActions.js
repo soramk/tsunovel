@@ -35,6 +35,36 @@ export async function triggerFetch(ncode, config, type = 'full', episodes = '') 
 }
 
 /**
+ * GitHubのリポジトリにrepository_dispatchイベントを送信して、指定した小説を削除する
+ */
+export async function triggerRemove(ncode, config) {
+    const { owner, repo, pat } = config;
+    const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            event_type: 'remove-novel',
+            client_payload: {
+                ncode
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `GitHub API error: ${response.status}`);
+    }
+
+    return true;
+}
+
+/**
  * 生成されたファイルをポーリングして取得する
  */
 export async function pollData(ncode, config) {
