@@ -4,8 +4,11 @@
 
 @layer base {
   body {
-    @apply antialiased;
+    @apply antialiased text-slate-200;
     overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -58,6 +61,13 @@
     transform: rotateY(180deg);
   }
 
+  .sharp-bg {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
   /* Fantasy UI Specific Utilities */
   .wooden-frame {
     background: linear-gradient(135deg, #5d4037 0%, #3e2723 100%);
@@ -77,7 +87,7 @@
   }
 
   .magical-glow {
-    filter: drop-shadow(0 0 8px rgba(100, 149, 237, 0.6));
+    filter: drop-shadow(0 0 10px rgba(101, 150, 240, 0.7)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
   }
 
   .scroll-body {

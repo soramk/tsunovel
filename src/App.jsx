@@ -791,18 +791,27 @@ export default function Tsunovel() {
         <div className="relative min-h-screen overflow-hidden">
           {/* Background Image */}
           <div
-            className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+            className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat sharp-bg"
             style={{
               backgroundImage: `url(${import.meta.env.BASE_URL}pict/final_bg.png)`,
-              filter: 'none',
               imageRendering: 'auto'
             }}
           >
           </div>
 
           <div className="relative z-10 animate-in fade-in duration-1000">
-            <header className="pt-8 px-6">
-              <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-0">
+            <header className="pt-8 px-6 relative z-20">
+              <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-0 relative">
+
+                {/* Center Logo - Always Visible */}
+                <div className="md:absolute md:left-1/2 md:-translate-x-1/2 md:-top-4 pointer-events-none flex justify-center w-full md:w-auto mb-4 md:mb-0">
+                  <img
+                    src={`${import.meta.env.BASE_URL}pict/title.png`}
+                    alt="Tsunovel"
+                    className="h-20 sm:h-28 md:h-36 object-contain magical-glow animate-float drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]"
+                  />
+                </div>
+
                 {/* Left Side: Genre Button */}
                 <div className="flex w-full md:w-auto justify-between items-center md:justify-start gap-4">
                   <button
@@ -829,8 +838,6 @@ export default function Tsunovel() {
                     </button>
                   </div>
                 </div>
-
-                {/* Center: (Removed programmatic logo, now part of final_bg.png) */}
 
                 {/* Right Side: Action Buttons (Desktop) */}
                 <div className="hidden md:flex items-center gap-3">
