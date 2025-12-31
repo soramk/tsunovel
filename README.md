@@ -13,8 +13,9 @@ Web小説を収集（積ん読）し、自分好みの快適な環境で読む�
 - **Makimono UI**: 小説を「巻物」として表現した幻想的なデザイン
 - **マルチデバイス・レイアウト**:
   - **Desktop**: 多数の作品を一覧できるレスポンシブな多段グリッド表示
-  - **Mobile**: 横スクロールによる直感的なブラウジング
+  - **Mobile**: 縦型ブックリストによる最適化されたブラウジング
 - **フィルタリング**: ジャンル別、または「お気に入り」による絞り込み機能
+- **管理機能**: 小説の「召喚（追加）」および「還送（削除）」をサポート
 
 ### 2. リーダー画面 (Reader View)
 
@@ -28,25 +29,21 @@ Web小説を収集（積ん読）し、自分好みの快適な環境で読む�
 ### 3. 小説取得・同期機能 (GitHub Actions 連携)
 
 - **なろう/R18対応**: 「小説家になろう」および「ノクターン/ムーンライト/ミッドナイトノベルズ」に対応
+- **マルチ・バッチ取得**: 複数の小説URLやNCODEを一度に「召喚」可能
 - **自動エピソード取得**: GitHub Actions を使用して、バックグラウンドで最新エピソードまで自動収集
-- **同期機能**: 既存作品の更新チェック、未取得話のみの差分取得、特定話の再取得が可能
+- **同期・保守機能**: 既存作品の更新チェック、未取得話のみの差分取得、特定話の再取得、不要な小説の削除が可能
 
 ## 技術スタック
 
 - **Frontend**: React, Vite
-- **Styling**: Tailwind CSS
+- **Styling**: Vanilla CSS (Fantasy Theme System)
 - **Icons**: lucide-react (Lucide)
-- **Backend Automation**: GitHub Actions
+- **Backend Automation**: GitHub Actions (Node.js)
 - **Data Source**: なろう小説API (通常 / R18)
 
-## セットアップ
+## セットアップ & ドキュメント
 
-### 必要な環境
-
-- Node.js (v18以上推奨)
-- GitHub リポジトリ（Actions を使用する場合）
-
-### インストール
+### クイックスタート
 
 ```bash
 # 依存関係のインストール
@@ -56,16 +53,10 @@ npm install
 npm run dev
 ```
 
-## GitHub Actions の設定 (重要)
+### 詳細ガイド
 
-小説を実際に取得・保存するには、GitHub Actions の設定が必要です。
-
-1. **PAT (Personal Access Token) の作成**:
-   - `repo` 権限を持つ PAT を作成します。
-2. **Web UI での設定**:
-   - 右上の設定アイコンから、GitHub の Owner 名、Repository 名、PAT を入力して保存します。
-3. **小説の追加**:
-   - 「召喚（追加）」ボタンから URL を入力すると、GitHub Actions が起動し、小説データが `storage/` フォルダに自動的に蓄積されます。
+- [API設定ガイド](file:///c:/Users/sora0/OneDrive/github/tsunovel/API_SETUP.md): GitHub Actionsとの連携設定
+- [トラブルシューティング](file:///c:/Users/sora0/OneDrive/github/tsunovel/TROUBLESHOOTING.md): 困ったときは
 
 ## プロジェクト構造
 
@@ -79,11 +70,13 @@ tsunovel/
 │   └── index.css        # デザインシステム (Fantasy UI)
 ├── storage/             # 取得済み小説データの保存先 (JSON/Text)
 ├── scripts/
-│   └── fetch_novel.cjs  # 小説取得エンジンスクリプト
+│   ├── fetch_novel.cjs  # 小説取得エンジン
+│   ├── remove_novel.cjs # 小説削除スクリプト
+│   └── enrich_index.cjs # インデックス最適化スクリプト
 └── .github/
     └── workflows/       # GitHub Actions ワークフロー定義
 ```
 
 ## ライセンス
 
-このプロジェクトはプロトタイプです。利用規約等を遵守してご利用ください。
+このプロジェクトは個人の読書体験を向上させるためのプロトタイプです。利用規約等を遵守してご利用ください。
