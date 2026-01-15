@@ -264,7 +264,7 @@ export default function Tsunovel() {
 
     for (let i = startChapter; i <= totalChapters; i++) {
       try {
-        // すでにlocalStorageにある場合はスキップ
+        // Skip if already cached in localStorage
         const cached = loadChapterFromLocalStorage(ncodeLower, i);
         if (cached) {
           successCount++;
@@ -422,10 +422,10 @@ export default function Tsunovel() {
     const novel = novels.find(n => n.id === novelId);
     if (!novel) return;
 
-    // 重複読み込み防止 (Setを使用)
+    // Prevent duplicate loading (using Set)
     if (loadingChapters.has(chapterNum)) return;
 
-    // スクロールモードで既に読み込み済みの場合はスキップ（appendの場合のみ）
+    // In scroll mode, skip if already loaded (only for append mode)
     if (mode === 'append' && readerChapters.some(c => c.chapterNum === chapterNum)) return;
 
     if (!isPrefetch) {
@@ -440,7 +440,7 @@ export default function Tsunovel() {
     try {
       const ncodeLower = novel.ncode.toLowerCase();
       
-      // まずlocalStorageから取得を試みる
+      // First try to load from localStorage
       const cachedChapter = loadChapterFromLocalStorage(ncodeLower, chapterNum);
       let novelContent = '';
       let title = `Chapter ${chapterNum}`;
@@ -450,7 +450,7 @@ export default function Tsunovel() {
         title = cachedChapter.title;
         console.log(`Loaded chapter ${chapterNum} from localStorage cache`);
       } else {
-        // localStorageになければGitHub API 経由で取得
+        // If not in localStorage, fetch from GitHub API
         const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${chapterNum}.txt`;
         const fetchOptions = githubConfig.pat ? {
           headers: {
@@ -463,13 +463,13 @@ export default function Tsunovel() {
         if (contentRes.ok) {
           novelContent = await contentRes.text();
           
-          // 章タイトルの抽出
+          // Extract chapter title
           if (novelContent && novelContent.startsWith('■ ')) {
             const firstLine = novelContent.split('\n')[0];
             title = firstLine.replace('■ ', '');
           }
           
-          // 取得できたらlocalStorageに保存
+          // Save to localStorage after successful fetch
           saveChapterToLocalStorage(ncodeLower, chapterNum, novelContent, title);
         } else if (chapterNum === 1) {
           const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
@@ -481,7 +481,7 @@ export default function Tsunovel() {
         }
       }
 
-      // info.jsonの取得
+      // Fetch info.json
       const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/info.json`;
       let infoData = novel.info || null;
 
@@ -505,8 +505,8 @@ export default function Tsunovel() {
       }
 
       if (!novelContent && !isPrefetch) {
-        // プリロードでない場合のみエラー表示
-        // もし取得できなかったら何もしない（またはエラー文を入れる）
+        // Only show error for non-prefetch loads
+        // If content couldn't be fetched, do nothing (or display error message)
       }
 
       const newChapter = {
@@ -516,11 +516,9 @@ export default function Tsunovel() {
       };
 
       if (isPrefetch) {
-        // プリロードの場合はステートに入れず、成功したことだけログに出すか、
-        // あるいは後で使いやすいようにしておく（現在は簡易的にログのみ、
-        // または `readerChapters` に入れるロジックが必要）
-        // スクロールモードなら既に追加されているはずなので、ここでは「何もしない」
-        // もしくはキャッシュ的な仕組みに入れる
+        // For prefetch, don't add to state, just log success
+        // Data is already cached in localStorage for later use
+        // In scroll mode, it should already be added, so do nothing here
         console.log(`Prefetched chapter ${chapterNum}`);
         return;
       }
@@ -552,7 +550,7 @@ export default function Tsunovel() {
         } : n
       ));
 
-      // しおりを更新
+      // Update bookmark
       setBookmarks(prev => ({ ...prev, [novelId]: chapterNum }));
 
     } catch (error) {
