@@ -107,6 +107,10 @@ export default function Tsunovel() {
     const saved = localStorage.getItem('tsunovel_history');
     return saved ? JSON.parse(saved) : [];
   });
+  const [historyEnabled, setHistoryEnabled] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_history_enabled');
+    return saved ? JSON.parse(saved) : true;
+  });
 
   useEffect(() => {
     localStorage.setItem('tsunovel_favorites', JSON.stringify(favorites));
@@ -115,6 +119,10 @@ export default function Tsunovel() {
   useEffect(() => {
     localStorage.setItem('tsunovel_history', JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem('tsunovel_history_enabled', JSON.stringify(historyEnabled));
+  }, [historyEnabled]);
 
   useEffect(() => {
     localStorage.setItem('tsunovel_selected_genre', selectedGenre);
@@ -164,6 +172,7 @@ export default function Tsunovel() {
       lineHeight: 1.8,
       textColor: '', // Empty means use theme default
       transitionMode: 'button', // 'button' or 'scroll'
+      showTitleOnTransition: false, // タイトルを毎回表示するか
     };
   });
 
@@ -235,6 +244,76 @@ export default function Tsunovel() {
   }, [isSettingsOpen, viewMode]);
 
   /**
+   * 小説全体または指定範囲を事前ダウンロード
+   */
+  const predownloadNovel = async (novelId, startChapter = 1, endChapter = null) => {
+    const novel = novels.find(n => n.id === novelId);
+    if (!novel || !novel.info) return;
+
+    const totalChapters = endChapter || novel.info.general_all_no || 0;
+    const ncodeLower = novel.ncode.toLowerCase();
+    
+    setIsDownloading(true);
+    setDownloadProgress(`オフライン用にダウンロード中... (0/${totalChapters})`);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = startChapter; i <= totalChapters; i++) {
+      try {
+        // すでにlocalStorageにある場合はスキップ
+        const cached = loadChapterFromLocalStorage(ncodeLower, i);
+        if (cached) {
+          successCount++;
+          setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters}) - キャッシュ済み`);
+          continue;
+        }
+
+        const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${i}.txt`;
+        const fetchOptions = githubConfig.pat ? {
+          headers: {
+            'Authorization': `Bearer ${githubConfig.pat}`,
+            'Accept': 'application/vnd.github.v3.raw',
+          }
+        } : {};
+
+        const contentRes = await fetch(chapterUrl, fetchOptions);
+        if (contentRes.ok) {
+          const content = await contentRes.text();
+          let title = `Chapter ${i}`;
+          if (content && content.startsWith('■ ')) {
+            const firstLine = content.split('\n')[0];
+            title = firstLine.replace('■ ', '');
+          }
+          
+          saveChapterToLocalStorage(ncodeLower, i, content, title);
+          successCount++;
+          setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters})`);
+        } else {
+          failCount++;
+        }
+        
+        // レート制限対策: 小さい待機時間を入れる
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to download chapter ${i}:`, error);
+        failCount++;
+      }
+    }
+
+    if (failCount > 0) {
+      setDownloadProgress(`ダウンロード完了 (成功: ${successCount}, 失敗: ${failCount})`);
+    } else {
+      setDownloadProgress(`すべてのデータをダウンロードしました！ (${successCount}話)`);
+    }
+    
+    setTimeout(() => {
+      setIsDownloading(false);
+      setDownloadProgress('');
+    }, 3000);
+  };
+
+  /**
    * 小説の個別情報 (info.json) を取得する
    */
   const loadNovelInfo = async (novelId) => {
@@ -284,11 +363,13 @@ export default function Tsunovel() {
     setOpeningBookId(novelId);
     await loadChapter(novelId, startChapter);
 
-    // 履歴に追加
-    setHistory(prev => {
-      const filtered = prev.filter(id => id !== novelId);
-      return [novelId, ...filtered].slice(0, 20); // 最大20件
-    });
+    // 履歴に追加（機能が有効な場合のみ）
+    if (historyEnabled) {
+      setHistory(prev => {
+        const filtered = prev.filter(id => id !== novelId);
+        return [novelId, ...filtered].slice(0, 20); // 最大20件
+      });
+    }
 
     // 1.5秒後に画面遷移
     setTimeout(() => {
@@ -300,6 +381,35 @@ export default function Tsunovel() {
         n.id === novelId && n.status === 'unread' ? { ...n, status: 'reading' } : n
       ));
     }, 1500);
+  };
+
+  /**
+   * 章データをlocalStorageに保存
+   */
+  const saveChapterToLocalStorage = (ncode, chapterNum, content, title) => {
+    try {
+      const key = `tsunovel_offline_${ncode}_${chapterNum}`;
+      const data = { content, title, timestamp: Date.now() };
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error('Failed to save chapter to localStorage:', e);
+    }
+  };
+
+  /**
+   * localStorageから章データを取得
+   */
+  const loadChapterFromLocalStorage = (ncode, chapterNum) => {
+    try {
+      const key = `tsunovel_offline_${ncode}_${chapterNum}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Failed to load chapter from localStorage:', e);
+    }
+    return null;
   };
 
   /**
@@ -325,38 +435,61 @@ export default function Tsunovel() {
     }
 
     try {
-      // GitHub API 経由での取得
       const ncodeLower = novel.ncode.toLowerCase();
-      const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${chapterNum}.txt`;
-      const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/info.json`;
-
+      
+      // まずlocalStorageから取得を試みる
+      const cachedChapter = loadChapterFromLocalStorage(ncodeLower, chapterNum);
       let novelContent = '';
+      let title = `Chapter ${chapterNum}`;
+      
+      if (cachedChapter) {
+        novelContent = cachedChapter.content;
+        title = cachedChapter.title;
+        console.log(`Loaded chapter ${chapterNum} from localStorage cache`);
+      } else {
+        // localStorageになければGitHub API 経由で取得
+        const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${chapterNum}.txt`;
+        const fetchOptions = githubConfig.pat ? {
+          headers: {
+            'Authorization': `Bearer ${githubConfig.pat}`,
+            'Accept': 'application/vnd.github.v3.raw',
+          }
+        } : {};
+
+        const contentRes = await fetch(chapterUrl, fetchOptions);
+        if (contentRes.ok) {
+          novelContent = await contentRes.text();
+          
+          // 章タイトルの抽出
+          if (novelContent && novelContent.startsWith('■ ')) {
+            const firstLine = novelContent.split('\n')[0];
+            title = firstLine.replace('■ ', '');
+          }
+          
+          // 取得できたらlocalStorageに保存
+          saveChapterToLocalStorage(ncodeLower, chapterNum, novelContent, title);
+        } else if (chapterNum === 1) {
+          const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
+          const legacyRes = await fetch(legacyUrl, fetchOptions);
+          if (legacyRes.ok) {
+            novelContent = await legacyRes.text();
+            saveChapterToLocalStorage(ncodeLower, chapterNum, novelContent, title);
+          }
+        }
+      }
+
+      // info.jsonの取得
+      const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/info.json`;
       let infoData = novel.info || null;
 
-      const fetchOptions = githubConfig.pat ? {
-        headers: {
-          'Authorization': `Bearer ${githubConfig.pat}`,
-          'Accept': 'application/vnd.github.v3.raw',
-        }
-      } : {};
-
-      const contentRes = await fetch(chapterUrl, fetchOptions);
-      if (contentRes.ok) {
-        novelContent = await contentRes.text();
-      } else if (chapterNum === 1) {
-        const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
-        const legacyRes = await fetch(legacyUrl, fetchOptions);
-        if (legacyRes.ok) {
-          novelContent = await legacyRes.text();
-        }
-      }
-
-      if (!novelContent && !isPrefetch) {
-        // プリロードでない場合のみエラー表示
-        // もし取得できなかったら何もしない（またはエラー文を入れる）
-      }
-
       if (!infoData) {
+        const fetchOptions = githubConfig.pat ? {
+          headers: {
+            'Authorization': `Bearer ${githubConfig.pat}`,
+            'Accept': 'application/vnd.github.v3.raw',
+          }
+        } : {};
+        
         const infoRes = await fetch(infoUrl, fetchOptions);
         if (infoRes.ok) {
           const infoText = await infoRes.text();
@@ -368,11 +501,9 @@ export default function Tsunovel() {
         }
       }
 
-      // 章タイトルの抽出（コンテンツの最初の行が「■ 」で始まっている場合）
-      let title = `Chapter ${chapterNum}`;
-      if (novelContent && novelContent.startsWith('■ ')) {
-        const firstLine = novelContent.split('\n')[0];
-        title = firstLine.replace('■ ', '');
+      if (!novelContent && !isPrefetch) {
+        // プリロードでない場合のみエラー表示
+        // もし取得できなかったら何もしない（またはエラー文を入れる）
       }
 
       const newChapter = {
@@ -1058,7 +1189,7 @@ export default function Tsunovel() {
                   </div>
 
                   {/* 最近読んだ作品 */}
-                  {history.length > 0 && (
+                  {historyEnabled && history.length > 0 && (
                     <div>
                       <div className="mb-4 px-2 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                         <div className="h-[1px] flex-1 bg-slate-700/30"></div>
@@ -1070,19 +1201,42 @@ export default function Tsunovel() {
                           const novel = novels.find(n => n.id === id);
                           if (!novel) return null;
                           return (
-                            <button
-                              key={id}
-                              onClick={() => {
-                                setSelectedNovelId(id);
-                                setIsSidebarOpen(false);
-                              }}
-                              className="w-full text-left px-4 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/5 hover:text-white transition-all truncate flex items-center gap-3"
-                            >
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></div>
-                              <span className="truncate">{novel.title}</span>
-                            </button>
+                            <div key={id} className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedNovelId(id);
+                                  setIsSidebarOpen(false);
+                                }}
+                                className="flex-1 text-left px-4 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/5 hover:text-white transition-all truncate flex items-center gap-3"
+                              >
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></div>
+                                <span className="truncate">{novel.title}</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHistory(prev => prev.filter(hId => hId !== id));
+                                }}
+                                className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                                title="履歴から削除"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
                           );
                         })}
+                        {history.length > 0 && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm('すべての履歴を削除しますか？')) {
+                                setHistory([]);
+                              }
+                            }}
+                            className="w-full text-center px-4 py-2 mt-2 rounded-xl text-[10px] font-bold text-red-400/60 hover:text-red-400 hover:bg-red-400/5 transition-all border border-red-500/10 hover:border-red-500/20"
+                          >
+                            すべての履歴を削除
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1214,6 +1368,15 @@ export default function Tsunovel() {
                     >
                       <Book size={20} />
                       物語世界へ
+                    </button>
+
+                    <button
+                      onClick={() => predownloadNovel(selectedNovelId)}
+                      disabled={isDownloading}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 rounded-xl shadow-[0_10px_30px_rgba(34,197,94,0.2)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      <Download size={18} />
+                      オフライン用にダウンロード
                     </button>
 
                     <div className="flex gap-2 relative">
@@ -1475,6 +1638,17 @@ export default function Tsunovel() {
                           スクロール
                         </button>
                       </div>
+                      {readerSettings.transitionMode === 'button' && (
+                        <div className="mt-3 flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <label className="text-xs text-gray-600 font-medium">タイトルを毎回表示</label>
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, showTitleOnTransition: !readerSettings.showTitleOnTransition })}
+                            className={`relative w-11 h-6 rounded-full transition-colors ${readerSettings.showTitleOnTransition ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                          >
+                            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${readerSettings.showTitleOnTransition ? 'translate-x-5' : ''}`}></div>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1587,17 +1761,19 @@ export default function Tsunovel() {
           {/* Reader Content */}
           <div className={`${getReaderStyles().className} pt-24`} style={getReaderStyles().style}>
             <div className="max-w-2xl mx-auto pb-32">
-              <div className="mb-12 text-center border-b border-current/10 pb-8">
-                <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
-                  {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
-                </span>
-                <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
-                  {novels.find(n => n.id === currentNovelId)?.title}
-                </h1>
-                <p className="text-sm opacity-60">
-                  著者: {novels.find(n => n.id === currentNovelId)?.author}
-                </p>
-              </div>
+              {(readerSettings.transitionMode === 'scroll' || readerSettings.showTitleOnTransition || currentChapter === (bookmarks[currentNovelId] || 1)) && (
+                <div className="mb-12 text-center border-b border-current/10 pb-8">
+                  <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
+                    {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
+                  </span>
+                  <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
+                    {novels.find(n => n.id === currentNovelId)?.title}
+                  </h1>
+                  <p className="text-sm opacity-60">
+                    著者: {novels.find(n => n.id === currentNovelId)?.author}
+                  </p>
+                </div>
+              )}
 
               {isLoadingChapter && readerChapters.length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
@@ -1766,6 +1942,54 @@ export default function Tsunovel() {
                       破棄
                     </button>
                   </div>
+                </div>
+              </section>
+
+              {/* 読書履歴設定 */}
+              <section className="bg-[#1c2632] rounded-3xl p-8 sm:p-10 border border-[#2c3e50]/50 shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative z-10">
+                <div className="flex items-center gap-4 mb-8 border-b border-[#2c3e50] pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20 shadow-inner">
+                    <Bookmark size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold font-serif text-white">読書履歴設定</h3>
+                    <p className="text-xs text-slate-500 font-serif italic mt-1">最近読んだ作品の記録管理</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-5 bg-[#141d26] rounded-2xl border border-[#2c3e50]">
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white mb-1">最近読んだ作品を記録</p>
+                      <p className="text-xs text-slate-500">オフにすると履歴が記録されなくなります</p>
+                    </div>
+                    <button
+                      onClick={() => setHistoryEnabled(!historyEnabled)}
+                      className={`relative w-14 h-7 rounded-full transition-colors ${historyEnabled ? 'bg-blue-600' : 'bg-gray-600'}`}
+                    >
+                      <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${historyEnabled ? 'translate-x-7' : ''}`}></div>
+                    </button>
+                  </div>
+
+                  {historyEnabled && history.length > 0 && (
+                    <div className="p-5 bg-[#141d26] rounded-2xl border border-[#2c3e50]">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-bold text-white">現在の履歴</p>
+                        <span className="text-xs text-slate-500">{history.length}件</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('すべての履歴を削除しますか？この操作は取り消せません。')) {
+                            setHistory([]);
+                          }
+                        }}
+                        className="w-full bg-red-900/20 hover:bg-red-900/30 text-red-400 font-bold py-3 rounded-xl transition-all border border-red-500/20 hover:border-red-500/40 flex items-center justify-center gap-2"
+                      >
+                        <X size={16} />
+                        すべての履歴を削除
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
 
