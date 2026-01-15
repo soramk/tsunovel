@@ -172,7 +172,7 @@ export default function Tsunovel() {
       lineHeight: 1.8,
       textColor: '', // Empty means use theme default
       transitionMode: 'button', // 'button' or 'scroll'
-      showTitleOnTransition: false, // タイトルを毎回表示するか
+      showTitleOnTransition: false, // Whether to show title on each transition
     };
   });
 
@@ -243,8 +243,11 @@ export default function Tsunovel() {
     };
   }, [isSettingsOpen, viewMode]);
 
+  // Rate limiting delay for API requests (in milliseconds)
+  const RATE_LIMIT_DELAY = 100;
+
   /**
-   * 小説全体または指定範囲を事前ダウンロード
+   * Pre-download entire novel or specified range to localStorage for offline reading
    */
   const predownloadNovel = async (novelId, startChapter = 1, endChapter = null) => {
     const novel = novels.find(n => n.id === novelId);
@@ -293,8 +296,8 @@ export default function Tsunovel() {
           failCount++;
         }
         
-        // レート制限対策: 小さい待機時間を入れる
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Rate limiting: add delay between requests to avoid API throttling
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
       } catch (error) {
         console.error(`Failed to download chapter ${i}:`, error);
         failCount++;
@@ -314,7 +317,7 @@ export default function Tsunovel() {
   };
 
   /**
-   * 小説の個別情報 (info.json) を取得する
+   * Get individual novel information (info.json)
    */
   const loadNovelInfo = async (novelId) => {
     const novel = novels.find(n => n.id === novelId);
@@ -384,7 +387,7 @@ export default function Tsunovel() {
   };
 
   /**
-   * 章データをlocalStorageに保存
+   * Save chapter data to localStorage
    */
   const saveChapterToLocalStorage = (ncode, chapterNum, content, title) => {
     try {
@@ -397,7 +400,7 @@ export default function Tsunovel() {
   };
 
   /**
-   * localStorageから章データを取得
+   * Load chapter data from localStorage
    */
   const loadChapterFromLocalStorage = (ncode, chapterNum) => {
     try {
@@ -413,7 +416,7 @@ export default function Tsunovel() {
   };
 
   /**
-   * 特定の話数を読み込む
+   * Load a specific chapter
    */
   const loadChapter = async (novelId, chapterNum, mode = 'replace', isPrefetch = false) => {
     const novel = novels.find(n => n.id === novelId);
@@ -565,7 +568,7 @@ export default function Tsunovel() {
   };
 
   /**
-   * 小説の情報を最新に同期・更新する
+   * Sync and update novel information to latest version
    */
   const handleSyncNovel = async (novelId, type = 'full', episodes = '') => {
     const novel = novels.find(n => n.id === novelId);
@@ -610,7 +613,7 @@ export default function Tsunovel() {
   };
 
   /**
-   * 小説を削除する
+   * Remove a novel from the library
    */
   const handleRemoveNovel = async (novelId) => {
     const novel = novels.find(n => n.id === novelId);
