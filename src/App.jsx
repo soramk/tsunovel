@@ -23,7 +23,15 @@ import {
   MousePointer2,
   List,
   Home,
-  Filter
+  Filter,
+  HardDrive,
+  Cloud,
+  CheckCircle2,
+  CloudOff,
+  Waves,
+  TreePine,
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, triggerRemove, pollData, fetchIndex } from './utils/githubActions';
@@ -66,17 +74,8 @@ const GENRE_MAP = {
  * 4. Enhanced Reader Settings (Font & Size Controls)
  */
 
-// モックデータ
+// 初期データ
 const INITIAL_NOVELS = [];
-
-const MOCK_SEARCH_DB = [
-  { title: "転生したらスライムだった件", author: "伏瀬", site: "Shosetsuka ni Naro", desc: "スライムとして異世界転生した主人公が...", keyword: "slime fantasy" },
-  { title: "無職転生", author: "理不尽な孫の手", site: "Shosetsuka ni Naro", desc: "34歳無職が異世界で本気だす...", keyword: "magic wand" },
-  { title: "本好きの下剋上", author: "香月美夜", site: "Shosetsuka ni Naro", desc: "本がないなら作ればいい...", keyword: "old book" },
-  { title: "Re:Zeroから始める異世界生活", author: "長月達平", site: "Shosetsuka ni Naro", desc: "死に戻りの運命...", keyword: "dark fantasy" },
-  { title: "オーバーロード", author: "丸山くがね", site: "Shosetsuka ni Naro", desc: "ゲーム世界に閉じ込められた...", keyword: "overlord game" },
-  { title: "ソードアート・オンライン", author: "川原礫", site: "Shosetsuka ni Naro", desc: "VRMMOの世界で...", keyword: "sao vr" },
-];
 
 export default function Tsunovel() {
   const [novels, setNovels] = useState(INITIAL_NOVELS);
@@ -255,7 +254,7 @@ export default function Tsunovel() {
 
     const totalChapters = endChapter || novel.info.general_all_no || 0;
     const ncodeLower = novel.ncode.toLowerCase();
-    
+
     setIsDownloading(true);
     setDownloadProgress(`オフライン用にダウンロード中... (0/${totalChapters})`);
 
@@ -288,14 +287,14 @@ export default function Tsunovel() {
             const firstLine = content.split('\n')[0];
             title = firstLine.replace('■ ', '');
           }
-          
+
           saveChapterToLocalStorage(ncodeLower, i, content, title);
           successCount++;
           setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters})`);
         } else {
           failCount++;
         }
-        
+
         // Rate limiting: add delay between requests to avoid API throttling
         await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
       } catch (error) {
@@ -309,7 +308,7 @@ export default function Tsunovel() {
     } else {
       setDownloadProgress(`すべてのデータをダウンロードしました！ (${successCount}話)`);
     }
-    
+
     setTimeout(() => {
       setIsDownloading(false);
       setDownloadProgress('');
@@ -416,6 +415,38 @@ export default function Tsunovel() {
   };
 
   /**
+   * Get download status for a novel
+   * Returns: { downloadedCount, totalCount, percentage, isComplete, chapters: [{ num, downloaded }] }
+   */
+  const getDownloadStatus = (novel) => {
+    if (!novel || !novel.ncode) {
+      return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
+    }
+
+    const ncodeLower = novel.ncode.toLowerCase();
+    const totalCount = novel.info?.general_all_no || 0;
+
+    if (totalCount === 0) {
+      return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
+    }
+
+    const chapters = [];
+    let downloadedCount = 0;
+
+    for (let i = 1; i <= totalCount; i++) {
+      const key = `tsunovel_offline_${ncodeLower}_${i}`;
+      const exists = localStorage.getItem(key) !== null;
+      chapters.push({ num: i, downloaded: exists });
+      if (exists) downloadedCount++;
+    }
+
+    const percentage = Math.round((downloadedCount / totalCount) * 100);
+    const isComplete = downloadedCount === totalCount;
+
+    return { downloadedCount, totalCount, percentage, isComplete, chapters };
+  };
+
+  /**
    * Load a specific chapter
    */
   const loadChapter = async (novelId, chapterNum, mode = 'replace', isPrefetch = false) => {
@@ -439,12 +470,12 @@ export default function Tsunovel() {
 
     try {
       const ncodeLower = novel.ncode.toLowerCase();
-      
+
       // First try to load from localStorage
       const cachedChapter = loadChapterFromLocalStorage(ncodeLower, chapterNum);
       let novelContent = '';
       let title = `Chapter ${chapterNum}`;
-      
+
       if (cachedChapter) {
         novelContent = cachedChapter.content;
         title = cachedChapter.title;
@@ -462,13 +493,13 @@ export default function Tsunovel() {
         const contentRes = await fetch(chapterUrl, fetchOptions);
         if (contentRes.ok) {
           novelContent = await contentRes.text();
-          
+
           // Extract chapter title
           if (novelContent && novelContent.startsWith('■ ')) {
             const firstLine = novelContent.split('\n')[0];
             title = firstLine.replace('■ ', '');
           }
-          
+
           // Save to localStorage after successful fetch
           saveChapterToLocalStorage(ncodeLower, chapterNum, novelContent, title);
         } else if (chapterNum === 1) {
@@ -492,7 +523,7 @@ export default function Tsunovel() {
             'Accept': 'application/vnd.github.v3.raw',
           }
         } : {};
-        
+
         const infoRes = await fetch(infoUrl, fetchOptions);
         if (infoRes.ok) {
           const infoText = await infoRes.text();
@@ -1089,6 +1120,7 @@ export default function Tsunovel() {
                           return novel.info?.genre?.toString() === selectedGenre;
                         })
                         .map((novel, index) => {
+                          const downloadStatus = getDownloadStatus(novel);
                           return (
                             <div
                               key={novel.id}
@@ -1111,15 +1143,50 @@ export default function Tsunovel() {
                                   {novel.status === 'reading' && (
                                     <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
                                   )}
+
+                                  {/* Download Status Icon Badge */}
+                                  {downloadStatus.totalCount > 0 && (
+                                    <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${downloadStatus.isComplete
+                                      ? 'bg-green-500 text-white'
+                                      : downloadStatus.percentage > 0
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-gray-400/80 text-white'
+                                      }`}
+                                      title={downloadStatus.isComplete ? '完全オフライン対応' : `${downloadStatus.downloadedCount}/${downloadStatus.totalCount}話 ダウンロード済み`}
+                                    >
+                                      {downloadStatus.isComplete ? (
+                                        <HardDrive size={12} />
+                                      ) : downloadStatus.percentage > 0 ? (
+                                        <Cloud size={12} />
+                                      ) : (
+                                        <CloudOff size={12} />
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Right/Bottom Handle */}
                                 <div className="w-4 sm:w-full h-24 sm:h-5 scroll-handle rounded-r-sm sm:rounded-b-sm sm:rounded-r-none"></div>
                               </div>
 
-                              {/* Novel Info Label */}
+                              {/* Novel Info Label with Download Progress */}
                               <div className="text-center w-full sm:max-w-[160px]">
                                 <p className="text-[10px] text-amber-200/60 font-serif italic line-clamp-1">{novel.author}</p>
+                                {/* Download Progress Bar */}
+                                {downloadStatus.totalCount > 0 && downloadStatus.percentage > 0 && (
+                                  <div className="mt-1.5 w-full">
+                                    <div className="h-1 bg-black/30 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full transition-all duration-500 rounded-full ${downloadStatus.isComplete ? 'bg-green-400' : 'bg-amber-400'
+                                          }`}
+                                        style={{ width: `${downloadStatus.percentage}%` }}
+                                      ></div>
+                                    </div>
+                                    <p className="text-[8px] text-amber-200/40 mt-0.5 font-mono">
+                                      {downloadStatus.downloadedCount}/{downloadStatus.totalCount}話
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -1355,6 +1422,88 @@ export default function Tsunovel() {
                       <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
                         {novels.find(n => n.id === selectedNovelId)?.info?.story || "あらすじを取得できませんでした。"}
                       </p>
+
+                      {/* Download Status Section */}
+                      {(() => {
+                        const novel = novels.find(n => n.id === selectedNovelId);
+                        const downloadStatus = getDownloadStatus(novel);
+
+                        if (downloadStatus.totalCount === 0) return null;
+
+                        return (
+                          <div className="mt-6 pt-5 border-t border-slate-700/50">
+                            {/* Download Summary */}
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                {downloadStatus.isComplete ? (
+                                  <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                                    <CheckCircle2 size={18} className="text-green-400" />
+                                  </div>
+                                ) : downloadStatus.percentage > 0 ? (
+                                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                                    <Cloud size={18} className="text-amber-400" />
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center">
+                                    <CloudOff size={18} className="text-slate-500" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-xs font-bold text-white">
+                                    {downloadStatus.isComplete ? 'オフライン対応完了' : 'オフラインダウンロード'}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400">
+                                    {downloadStatus.downloadedCount} / {downloadStatus.totalCount} 話ダウンロード済み
+                                  </p>
+                                </div>
+                              </div>
+                              <span className={`text-lg font-bold font-mono ${downloadStatus.isComplete ? 'text-green-400' : downloadStatus.percentage > 0 ? 'text-amber-400' : 'text-slate-500'
+                                }`}>
+                                {downloadStatus.percentage}%
+                              </span>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-4">
+                              <div
+                                className={`h-full transition-all duration-500 rounded-full ${downloadStatus.isComplete ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'
+                                  }`}
+                                style={{ width: `${downloadStatus.percentage}%` }}
+                              ></div>
+                            </div>
+
+                            {/* Chapter Grid - Collapsible */}
+                            <details className="group">
+                              <summary className="cursor-pointer list-none flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                                <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
+                                <span>各話のダウンロード状態を表示</span>
+                              </summary>
+                              <div className="mt-3 grid grid-cols-10 gap-1 max-h-32 overflow-y-auto custom-scrollbar p-2 bg-slate-900/50 rounded-lg">
+                                {downloadStatus.chapters.map(ch => (
+                                  <div
+                                    key={ch.num}
+                                    className={`w-full aspect-square rounded flex items-center justify-center text-[8px] font-mono font-bold transition-all ${ch.downloaded
+                                      ? 'bg-green-500/30 text-green-300 border border-green-500/30'
+                                      : 'bg-slate-800/50 text-slate-600 border border-slate-700/30'
+                                      }`}
+                                    title={ch.downloaded ? `${ch.num}話: ダウンロード済み` : `${ch.num}話: 未ダウンロード`}
+                                  >
+                                    {ch.num}
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="mt-2 flex items-center gap-4 text-[9px] text-slate-500">
+                                <span className="flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded bg-green-500/50"></span> ダウンロード済み
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded bg-slate-600"></span> 未ダウンロード
+                                </span>
+                              </div>
+                            </details>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -1469,28 +1618,28 @@ export default function Tsunovel() {
                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">テーマ</label>
                         <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded text-gray-500">{readerSettings.theme}</span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-3 gap-3">
                         {[
                           { id: 'light', icon: Sun, label: 'ライト', class: 'bg-white text-gray-800' },
                           { id: 'sepia', icon: Coffee, label: 'セピア', class: 'bg-[#f4ecd8] text-[#5b4636]' },
                           { id: 'dark', icon: Moon, label: 'ダーク', class: 'bg-gray-800 text-gray-100' },
-                          { id: 'midnight', icon: Bookmark, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
+                          { id: 'midnight', icon: Sparkles, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
                           { id: 'ivory', icon: Type, label: 'アイボ', class: 'bg-[#fffff0] text-[#2d241e]' },
                           { id: 'softgreen', icon: Book, label: 'グリーン', class: 'bg-[#f0f9f0] text-[#2d4a2d]' },
-                          { id: 'ocean', icon: MousePointer2, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
-                          { id: 'forest', icon: Plus, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
-                          { id: 'paper', icon: Book, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
+                          { id: 'ocean', icon: Waves, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
+                          { id: 'forest', icon: TreePine, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
+                          { id: 'paper', icon: FileText, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
                           { id: 'coffee-deep', icon: Coffee, label: '珈琲', class: 'bg-[#3e2723] text-[#d7ccc8]' },
                         ].map(t => (
                           <button
                             key={t.id}
                             onClick={() => setReaderSettings({ ...readerSettings, theme: t.id })}
-                            className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${readerSettings.theme === t.id ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent hover:bg-gray-50'}`}
+                            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${readerSettings.theme === t.id ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent hover:bg-gray-50'}`}
                           >
-                            <div className={`w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-sm ${t.class} border border-gray-200`}>
-                              <t.icon size={14} />
+                            <div className={`w-12 h-12 rounded-xl mb-2 flex items-center justify-center shadow-md ${t.class} border border-gray-200`}>
+                              <t.icon size={24} />
                             </div>
-                            <span className="text-[10px] font-bold">{t.label}</span>
+                            <span className="text-xs font-bold">{t.label}</span>
                           </button>
                         ))}
                       </div>
@@ -1762,7 +1911,7 @@ export default function Tsunovel() {
           {/* Reader Content */}
           <div className={`${getReaderStyles().className} pt-24`} style={getReaderStyles().style}>
             <div className="max-w-2xl mx-auto pb-32">
-              {(readerSettings.transitionMode === 'scroll' || readerSettings.showTitleOnTransition || currentChapter === (bookmarks[currentNovelId] || 1)) && (
+              {(readerSettings.transitionMode === 'scroll' || (readerSettings.transitionMode === 'button' && readerSettings.showTitleOnTransition)) && (
                 <div className="mb-12 text-center border-b border-current/10 pb-8">
                   <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
                     {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
