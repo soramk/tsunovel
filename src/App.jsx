@@ -31,7 +31,8 @@ import {
   Waves,
   TreePine,
   FileText,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, triggerRemove, pollData, fetchIndex } from './utils/githubActions';
@@ -172,6 +173,7 @@ export default function Tsunovel() {
       textColor: '', // Empty means use theme default
       transitionMode: 'button', // 'button' or 'scroll'
       showTitleOnTransition: false, // Whether to show title on each transition
+      showHeaderTitle: true, // Whether to show title in reader header and footer
     };
   });
 
@@ -252,23 +254,37 @@ export default function Tsunovel() {
     const novel = novels.find(n => n.id === novelId);
     if (!novel || !novel.info) return;
 
+    // If already downloading, reset the state to allow restart
+    if (isDownloading) {
+      setIsDownloading(false);
+      setDownloadProgress('');
+      // Wait a bit before allowing restart
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
     const totalChapters = endChapter || novel.info.general_all_no || 0;
     const ncodeLower = novel.ncode.toLowerCase();
 
-    setIsDownloading(true);
-    setDownloadProgress(`オフライン用にダウンロード中... (0/${totalChapters})`);
+    // Count already downloaded chapters first
+    let alreadyDownloaded = 0;
+    for (let i = startChapter; i <= totalChapters; i++) {
+      const cached = loadChapterFromLocalStorage(ncodeLower, i);
+      if (cached) alreadyDownloaded++;
+    }
 
-    let successCount = 0;
+    setIsDownloading(true);
+    setDownloadProgress(`オフライン用にダウンロード中... (${alreadyDownloaded}/${totalChapters})`);
+
+    let successCount = alreadyDownloaded;
     let failCount = 0;
+    let newDownloads = 0;
 
     for (let i = startChapter; i <= totalChapters; i++) {
       try {
         // Skip if already cached in localStorage
         const cached = loadChapterFromLocalStorage(ncodeLower, i);
         if (cached) {
-          successCount++;
-          setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters}) - キャッシュ済み`);
-          continue;
+          continue; // Already counted above
         }
 
         const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${i}.txt`;
@@ -290,9 +306,11 @@ export default function Tsunovel() {
 
           saveChapterToLocalStorage(ncodeLower, i, content, title);
           successCount++;
+          newDownloads++;
           setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters})`);
         } else {
           failCount++;
+          setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters}) - ${failCount}件失敗`);
         }
 
         // Rate limiting: add delay between requests to avoid API throttling
@@ -303,7 +321,9 @@ export default function Tsunovel() {
       }
     }
 
-    if (failCount > 0) {
+    if (newDownloads === 0 && failCount === 0) {
+      setDownloadProgress('すべてのデータは既にダウンロード済みです！');
+    } else if (failCount > 0) {
       setDownloadProgress(`ダウンロード完了 (成功: ${successCount}, 失敗: ${failCount})`);
     } else {
       setDownloadProgress(`すべてのデータをダウンロードしました！ (${successCount}話)`);
@@ -444,6 +464,34 @@ export default function Tsunovel() {
     const isComplete = downloadedCount === totalCount;
 
     return { downloadedCount, totalCount, percentage, isComplete, chapters };
+  };
+
+  /**
+   * Clear all offline downloaded data for a novel
+   */
+  const clearOfflineData = (novelId) => {
+    const novel = novels.find(n => n.id === novelId);
+    if (!novel || !novel.ncode) return;
+
+    if (!window.confirm(`「${novel.title}」のオフラインデータをすべて削除しますか？\nこの操作は取り消せません。`)) {
+      return;
+    }
+
+    const ncodeLower = novel.ncode.toLowerCase();
+    const totalCount = novel.info?.general_all_no || 0;
+    let deletedCount = 0;
+
+    for (let i = 1; i <= totalCount; i++) {
+      const key = `tsunovel_offline_${ncodeLower}_${i}`;
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        deletedCount++;
+      }
+    }
+
+    // Force a re-render by updating the download status display
+    setDownloadProgress(`${deletedCount}話分のオフラインデータを削除しました`);
+    setTimeout(() => setDownloadProgress(''), 3000);
   };
 
   /**
@@ -1529,6 +1577,24 @@ export default function Tsunovel() {
                       オフライン用にダウンロード
                     </button>
 
+                    {/* オフラインデータ削除ボタン - ダウンロード済みデータがある場合のみ表示 */}
+                    {(() => {
+                      const novel = novels.find(n => n.id === selectedNovelId);
+                      const downloadStatus = getDownloadStatus(novel);
+                      if (downloadStatus.downloadedCount > 0) {
+                        return (
+                          <button
+                            onClick={() => clearOfflineData(selectedNovelId)}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-amber-900/30 text-amber-500/70 hover:border-amber-500 hover:text-amber-400 hover:bg-amber-500/5 transition-all font-bold text-sm"
+                          >
+                            <Trash2 size={16} />
+                            オフラインデータを削除 ({downloadStatus.downloadedCount}話分)
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     <div className="flex gap-2 relative">
                       <button
                         onClick={() => setIsUpdateOptionsOpen(!isUpdateOptionsOpen)}
@@ -1598,9 +1664,11 @@ export default function Tsunovel() {
             >
               <List size={20} />
             </button>
-            <div className="text-sm font-bold text-gray-800 font-serif tracking-wide truncate max-w-[200px] sm:max-w-md">
-              {novels.find(n => n.id === currentNovelId)?.title}
-            </div>
+            {readerSettings.showHeaderTitle && (
+              <div className="text-sm font-bold text-gray-800 font-serif tracking-wide truncate max-w-[200px] sm:max-w-md">
+                {novels.find(n => n.id === currentNovelId)?.title}
+              </div>
+            )}
             <div className="relative" ref={settingsRef}>
               <button
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -1800,6 +1868,23 @@ export default function Tsunovel() {
                         </div>
                       )}
                     </div>
+
+                    {/* ヘッダー表示設定 */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                        <Type size={12} />
+                        表示オプション
+                      </label>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <label className="text-xs text-gray-600 font-medium">ヘッダー・フッターにタイトル表示</label>
+                        <button
+                          onClick={() => setReaderSettings({ ...readerSettings, showHeaderTitle: !readerSettings.showHeaderTitle })}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${readerSettings.showHeaderTitle ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                        >
+                          <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${readerSettings.showHeaderTitle ? 'translate-x-5' : ''}`}></div>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1877,9 +1962,11 @@ export default function Tsunovel() {
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 uppercase truncate max-w-[120px]">
-                  {currentNovel?.title}
-                </span>
+                {readerSettings.showHeaderTitle && (
+                  <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 uppercase truncate max-w-[120px]">
+                    {currentNovel?.title}
+                  </span>
+                )}
                 <span className="text-sm font-serif font-bold italic">
                   {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
                 </span>
