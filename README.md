@@ -55,8 +55,8 @@ npm run dev
 
 ### 詳細ガイド
 
-- [API設定ガイド](file:///c:/Users/sora0/OneDrive/github/tsunovel/API_SETUP.md): GitHub Actionsとの連携設定
-- [トラブルシューティング](file:///c:/Users/sora0/OneDrive/github/tsunovel/TROUBLESHOOTING.md): 困ったときは
+- [API設定ガイド](docs/API_SETUP.md): GitHub Actionsとの連携設定
+- [トラブルシューティング](docs/TROUBLESHOOTING.md): 困ったときは
 
 ## プロジェクト構造
 
@@ -68,6 +68,9 @@ tsunovel/
 │   │   ├── githubActions.js # API連携・Actionsトリガー
 │   │   └── novelFetcher.js  # URL解析・なろう検索
 │   └── index.css        # デザインシステム (Fantasy UI)
+├── docs/                # ドキュメント
+│   ├── API_SETUP.md     # API設定ガイド
+│   └── TROUBLESHOOTING.md # トラブルシューティング
 ├── storage/             # 取得済み小説データの保存先 (JSON/Text)
 ├── scripts/
 │   ├── fetch_novel.cjs  # 小説取得エンジン
