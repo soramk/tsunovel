@@ -32,10 +32,28 @@ import {
   TreePine,
   FileText,
   Sparkles,
-  Trash2
+  Trash2,
+  Database,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, triggerRemove, pollData, fetchIndex } from './utils/githubActions';
+import {
+  STORAGE_TYPES,
+  STORAGE_INFO,
+  getStorageType,
+  setStorageType as setStorageTypeSetting,
+  isIndexedDBAvailable,
+  saveChapter,
+  loadChapter as loadOfflineChapter,
+  chapterExists,
+  deleteAllChapters,
+  checkStorageSpace,
+  getStorageStats,
+  migrateToIndexedDB
+} from './utils/offlineStorage';
+
 
 const GENRE_MAP = {
   '0': '未選択〔未選択〕',
@@ -148,6 +166,54 @@ export default function Tsunovel() {
   });
   const [tempGithubConfig, setTempGithubConfig] = useState(githubConfig);
 
+  // オフラインストレージ設定
+  const [currentStorageType, setCurrentStorageType] = useState(() => getStorageType());
+  const [storageStats, setStorageStats] = useState(null);
+  const [isStorageSettingsOpen, setIsStorageSettingsOpen] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  // ストレージ統計を更新
+  const refreshStorageStats = async () => {
+    const stats = await getStorageStats();
+    setStorageStats(stats);
+  };
+
+  // ストレージタイプを変更
+  const handleStorageTypeChange = async (newType) => {
+    if (newType === currentStorageType) return;
+
+    if (newType === STORAGE_TYPES.INDEXED_DB && !isIndexedDBAvailable()) {
+      alert('お使いのブラウザはIndexedDBをサポートしていません。');
+      return;
+    }
+
+    if (newType === STORAGE_TYPES.INDEXED_DB) {
+      const confirmMigrate = window.confirm(
+        'ストレージタイプをIndexedDBに変更します。\n\n' +
+        '既存のlocalStorageデータをIndexedDBに移行しますか？'
+      );
+
+      if (confirmMigrate) {
+        setIsMigrating(true);
+        try {
+          await migrateToIndexedDB();
+          setDownloadProgress('データの移行が完了しました！');
+        } catch (e) {
+          console.error('Migration failed:', e);
+          setDownloadProgress('移行中にエラーが発生しました');
+        } finally {
+          setIsMigrating(false);
+          setTimeout(() => setDownloadProgress(''), 3000);
+        }
+      }
+    }
+
+    setStorageTypeSetting(newType);
+    setCurrentStorageType(newType);
+    await refreshStorageStats();
+  };
+
+
   // 小説ごとのしおり（最新読了話数）
   const [bookmarks, setBookmarks] = useState(() => {
     const saved = localStorage.getItem('tsunovel_bookmarks');
@@ -245,10 +311,13 @@ export default function Tsunovel() {
   }, [isSettingsOpen, viewMode]);
 
   // Rate limiting delay for API requests (in milliseconds)
-  const RATE_LIMIT_DELAY = 100;
+  const RATE_LIMIT_DELAY = 150;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000;
 
   /**
-   * Pre-download entire novel or specified range to localStorage for offline reading
+   * Pre-download entire novel or specified range for offline reading
+   * Uses the storage module which supports both localStorage and IndexedDB
    */
   const predownloadNovel = async (novelId, startChapter = 1, endChapter = null) => {
     const novel = novels.find(n => n.id === novelId);
@@ -258,8 +327,16 @@ export default function Tsunovel() {
     if (isDownloading) {
       setIsDownloading(false);
       setDownloadProgress('');
-      // Wait a bit before allowing restart
       await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Check storage space before starting
+    const hasSpace = await checkStorageSpace();
+    if (!hasSpace) {
+      const storageInfo = STORAGE_INFO[currentStorageType];
+      setDownloadProgress(`⚠️ ${storageInfo.displayName}の容量が不足しています。不要なデータを削除してください。`);
+      setTimeout(() => setDownloadProgress(''), 5000);
+      return;
     }
 
     const totalChapters = endChapter || novel.info.general_all_no || 0;
@@ -268,23 +345,25 @@ export default function Tsunovel() {
     // Count already downloaded chapters first
     let alreadyDownloaded = 0;
     for (let i = startChapter; i <= totalChapters; i++) {
-      const cached = loadChapterFromLocalStorage(ncodeLower, i);
-      if (cached) alreadyDownloaded++;
+      const exists = await chapterExists(ncodeLower, i);
+      if (exists) alreadyDownloaded++;
     }
 
     setIsDownloading(true);
-    setDownloadProgress(`オフライン用にダウンロード中... (${alreadyDownloaded}/${totalChapters})`);
+    const storageLabel = currentStorageType === STORAGE_TYPES.INDEXED_DB ? '[IndexedDB]' : '[localStorage]';
+    setDownloadProgress(`${storageLabel} オフライン用にダウンロード中... (${alreadyDownloaded}/${totalChapters})`);
 
     let successCount = alreadyDownloaded;
     let failCount = 0;
     let newDownloads = 0;
+    let quotaExceeded = false;
 
     for (let i = startChapter; i <= totalChapters; i++) {
       try {
-        // Skip if already cached in localStorage
-        const cached = loadChapterFromLocalStorage(ncodeLower, i);
-        if (cached) {
-          continue; // Already counted above
+        // Skip if already cached
+        const exists = await chapterExists(ncodeLower, i);
+        if (exists) {
+          continue;
         }
 
         const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${i}.txt`;
@@ -295,8 +374,31 @@ export default function Tsunovel() {
           }
         } : {};
 
-        const contentRes = await fetch(chapterUrl, fetchOptions);
-        if (contentRes.ok) {
+        let contentRes = null;
+        let retryCount = 0;
+
+        while (retryCount < MAX_RETRIES) {
+          try {
+            contentRes = await fetch(chapterUrl, fetchOptions);
+            if (contentRes.status === 403 || contentRes.status === 429) {
+              const waitTime = RETRY_DELAY * (retryCount + 1);
+              setDownloadProgress(`APIレート制限。${Math.ceil(waitTime / 1000)}秒後に再試行...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              retryCount++;
+              continue;
+            }
+            break;
+          } catch (fetchError) {
+            retryCount++;
+            if (retryCount < MAX_RETRIES) {
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount));
+            } else {
+              throw fetchError;
+            }
+          }
+        }
+
+        if (contentRes && contentRes.ok) {
           const content = await contentRes.text();
           let title = `Chapter ${i}`;
           if (content && content.startsWith('■ ')) {
@@ -304,16 +406,26 @@ export default function Tsunovel() {
             title = firstLine.replace('■ ', '');
           }
 
-          saveChapterToLocalStorage(ncodeLower, i, content, title);
-          successCount++;
-          newDownloads++;
-          setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters})`);
+          const saveResult = await saveChapter(ncodeLower, i, content, title);
+
+          if (saveResult.quotaExceeded) {
+            quotaExceeded = true;
+            setDownloadProgress(`⚠️ ストレージ容量オーバー！ (${successCount}話まで保存済み)`);
+            break;
+          }
+
+          if (saveResult.success) {
+            successCount++;
+            newDownloads++;
+            setDownloadProgress(`${storageLabel} オフライン用にダウンロード中... (${successCount}/${totalChapters})`);
+          } else {
+            failCount++;
+          }
         } else {
           failCount++;
-          setDownloadProgress(`オフライン用にダウンロード中... (${successCount}/${totalChapters}) - ${failCount}件失敗`);
+          setDownloadProgress(`${storageLabel} オフライン用にダウンロード中... (${successCount}/${totalChapters}) - ${failCount}件失敗`);
         }
 
-        // Rate limiting: add delay between requests to avoid API throttling
         await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
       } catch (error) {
         console.error(`Failed to download chapter ${i}:`, error);
@@ -321,7 +433,10 @@ export default function Tsunovel() {
       }
     }
 
-    if (newDownloads === 0 && failCount === 0) {
+    if (quotaExceeded) {
+      const storageInfo = STORAGE_INFO[currentStorageType];
+      setDownloadProgress(`⚠️ ${storageInfo.displayName}容量オーバー！ IndexedDBへの切り替えを推奨します。`);
+    } else if (newDownloads === 0 && failCount === 0) {
       setDownloadProgress('すべてのデータは既にダウンロード済みです！');
     } else if (failCount > 0) {
       setDownloadProgress(`ダウンロード完了 (成功: ${successCount}, 失敗: ${failCount})`);
@@ -332,7 +447,7 @@ export default function Tsunovel() {
     setTimeout(() => {
       setIsDownloading(false);
       setDownloadProgress('');
-    }, 3000);
+    }, quotaExceeded ? 8000 : 3000);
   };
 
   /**
@@ -406,37 +521,9 @@ export default function Tsunovel() {
   };
 
   /**
-   * Save chapter data to localStorage
-   */
-  const saveChapterToLocalStorage = (ncode, chapterNum, content, title) => {
-    try {
-      const key = `tsunovel_offline_${ncode}_${chapterNum}`;
-      const data = { content, title, timestamp: Date.now() };
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.error('Failed to save chapter to localStorage:', e);
-    }
-  };
-
-  /**
-   * Load chapter data from localStorage
-   */
-  const loadChapterFromLocalStorage = (ncode, chapterNum) => {
-    try {
-      const key = `tsunovel_offline_${ncode}_${chapterNum}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Failed to load chapter from localStorage:', e);
-    }
-    return null;
-  };
-
-  /**
-   * Get download status for a novel
-   * Returns: { downloadedCount, totalCount, percentage, isComplete, chapters: [{ num, downloaded }] }
+   * Get download status for a novel (using the storage module)
+   * Note: This is a sync wrapper that checks localStorage directly for compatibility
+   * For accurate IndexedDB status, use async version or refresh on modal open
    */
   const getDownloadStatus = (novel) => {
     if (!novel || !novel.ncode) {
@@ -450,6 +537,8 @@ export default function Tsunovel() {
       return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
     }
 
+    // For localStorage, we can check synchronously
+    // For IndexedDB, this would need to be async (so we check localStorage keys as fallback)
     const chapters = [];
     let downloadedCount = 0;
 
@@ -469,7 +558,7 @@ export default function Tsunovel() {
   /**
    * Clear all offline downloaded data for a novel
    */
-  const clearOfflineData = (novelId) => {
+  const clearOfflineData = async (novelId) => {
     const novel = novels.find(n => n.id === novelId);
     if (!novel || !novel.ncode) return;
 
@@ -477,19 +566,9 @@ export default function Tsunovel() {
       return;
     }
 
-    const ncodeLower = novel.ncode.toLowerCase();
     const totalCount = novel.info?.general_all_no || 0;
-    let deletedCount = 0;
+    const deletedCount = await deleteAllChapters(novel.ncode, totalCount);
 
-    for (let i = 1; i <= totalCount; i++) {
-      const key = `tsunovel_offline_${ncodeLower}_${i}`;
-      if (localStorage.getItem(key) !== null) {
-        localStorage.removeItem(key);
-        deletedCount++;
-      }
-    }
-
-    // Force a re-render by updating the download status display
     setDownloadProgress(`${deletedCount}話分のオフラインデータを削除しました`);
     setTimeout(() => setDownloadProgress(''), 3000);
   };
@@ -519,17 +598,17 @@ export default function Tsunovel() {
     try {
       const ncodeLower = novel.ncode.toLowerCase();
 
-      // First try to load from localStorage
-      const cachedChapter = loadChapterFromLocalStorage(ncodeLower, chapterNum);
+      // First try to load from offline storage (supports both localStorage and IndexedDB)
+      const cachedChapter = await loadOfflineChapter(ncodeLower, chapterNum);
       let novelContent = '';
       let title = `Chapter ${chapterNum}`;
 
       if (cachedChapter) {
         novelContent = cachedChapter.content;
         title = cachedChapter.title;
-        console.log(`Loaded chapter ${chapterNum} from localStorage cache`);
+        console.log(`Loaded chapter ${chapterNum} from offline cache (${currentStorageType})`);
       } else {
-        // If not in localStorage, fetch from GitHub API
+        // If not in cache, fetch from GitHub API
         const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${chapterNum}.txt`;
         const fetchOptions = githubConfig.pat ? {
           headers: {
@@ -548,14 +627,14 @@ export default function Tsunovel() {
             title = firstLine.replace('■ ', '');
           }
 
-          // Save to localStorage after successful fetch
-          saveChapterToLocalStorage(ncodeLower, chapterNum, novelContent, title);
+          // Save to offline storage after successful fetch
+          await saveChapter(ncodeLower, chapterNum, novelContent, title);
         } else if (chapterNum === 1) {
           const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
           const legacyRes = await fetch(legacyUrl, fetchOptions);
           if (legacyRes.ok) {
             novelContent = await legacyRes.text();
-            saveChapterToLocalStorage(ncodeLower, chapterNum, novelContent, title);
+            await saveChapter(ncodeLower, chapterNum, novelContent, title);
           }
         }
       }
