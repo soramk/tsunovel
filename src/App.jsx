@@ -213,6 +213,54 @@ export default function Tsunovel() {
     await refreshStorageStats();
   };
 
+  const [downloadStatuses, setDownloadStatuses] = useState({});
+
+  // 特定の小説のダウンロードステータスを非同期で更新
+  const updateDownloadStatusCache = async (novelId) => {
+    const novel = (novels || []).find(n => n.id === novelId);
+    if (!novel || !novel.ncode) return null;
+
+    const ncodeLower = novel.ncode.toLowerCase();
+    const totalCount = novel.info?.general_all_no || 0;
+
+    if (totalCount === 0) return null;
+
+    const chapters = [];
+    let downloadedCount = 0;
+
+    // 非同期で存在チェックを実行
+    for (let i = 1; i <= totalCount; i++) {
+      const exists = await chapterExists(ncodeLower, i);
+      chapters.push({ num: i, downloaded: exists });
+      if (exists) downloadedCount++;
+    }
+
+    const percentage = Math.round((downloadedCount / totalCount) * 100);
+    const isComplete = downloadedCount === totalCount;
+    const status = { downloadedCount, totalCount, percentage, isComplete, chapters };
+
+    setDownloadStatuses(prev => ({ ...prev, [novelId]: status }));
+    return status;
+  };
+
+  // 全小説のダウンロードステータスを一括更新（初期表示用）
+  const refreshAllDownloadStatuses = async () => {
+    if (!novels || novels.length === 0) return;
+    // 重い処理なので並列実行数を制限するか、順次実行
+    for (const novel of novels) {
+      if (novel.ncode) {
+        await updateDownloadStatusCache(novel.id);
+      }
+    }
+  };
+
+  // 初期化時、または小説リストが変わった時にステータスを更新
+  useEffect(() => {
+    if (novels && novels.length > 0) {
+      refreshAllDownloadStatuses();
+    }
+  }, [novels?.length, currentStorageType]);
+
 
   // 小説ごとのしおり（最新読了話数）
   const [bookmarks, setBookmarks] = useState(() => {
@@ -353,6 +401,9 @@ export default function Tsunovel() {
     const storageLabel = currentStorageType === STORAGE_TYPES.INDEXED_DB ? '[IndexedDB]' : '[localStorage]';
     setDownloadProgress(`${storageLabel} オフライン用にダウンロード中... (${alreadyDownloaded}/${totalChapters})`);
 
+    // 開始時に現状を反映
+    await updateDownloadStatusCache(novelId);
+
     let successCount = alreadyDownloaded;
     let failCount = 0;
     let newDownloads = 0;
@@ -418,6 +469,11 @@ export default function Tsunovel() {
             successCount++;
             newDownloads++;
             setDownloadProgress(`${storageLabel} オフライン用にダウンロード中... (${successCount}/${totalChapters})`);
+
+            // 5話ごとにキャッシュを更新してUIに反映（負荷軽減のため）
+            if (successCount % 5 === 0 || successCount === totalChapters) {
+              await updateDownloadStatusCache(novelId);
+            }
           } else {
             failCount++;
           }
@@ -432,6 +488,9 @@ export default function Tsunovel() {
         failCount++;
       }
     }
+
+    // 終了時に最終状態を反映
+    await updateDownloadStatusCache(novelId);
 
     if (quotaExceeded) {
       const storageInfo = STORAGE_INFO[currentStorageType];
@@ -530,6 +589,11 @@ export default function Tsunovel() {
       return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
     }
 
+    // キャッシュがあればそれを返す（IndexedDB対応）
+    if (downloadStatuses[novel.id]) {
+      return downloadStatuses[novel.id];
+    }
+
     const ncodeLower = novel.ncode.toLowerCase();
     const totalCount = novel.info?.general_all_no || 0;
 
@@ -537,8 +601,7 @@ export default function Tsunovel() {
       return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
     }
 
-    // For localStorage, we can check synchronously
-    // For IndexedDB, this would need to be async (so we check localStorage keys as fallback)
+    // フォールバック（同期チェック）: localStorageのみ
     const chapters = [];
     let downloadedCount = 0;
 
@@ -568,6 +631,9 @@ export default function Tsunovel() {
 
     const totalCount = novel.info?.general_all_no || 0;
     const deletedCount = await deleteAllChapters(novel.ncode, totalCount);
+
+    // キャッシュを更新
+    await updateDownloadStatusCache(novelId);
 
     setDownloadProgress(`${deletedCount}話分のオフラインデータを削除しました`);
     setTimeout(() => setDownloadProgress(''), 3000);
