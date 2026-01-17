@@ -51,7 +51,9 @@ import {
   deleteAllChapters,
   checkStorageSpace,
   getStorageStats,
-  migrateToIndexedDB
+  migrateToIndexedDB,
+  getDownloadedChapterCount,
+  getDownloadedChapterNumbers
 } from './utils/offlineStorage';
 
 
@@ -225,12 +227,15 @@ export default function Tsunovel() {
 
     if (totalCount === 0) return null;
 
+    // 高速な一括取得を使用
+    const downloadedChapterNums = await getDownloadedChapterNumbers(ncodeLower);
+    const downloadedSet = new Set(downloadedChapterNums);
+
     const chapters = [];
     let downloadedCount = 0;
 
-    // 非同期で存在チェックを実行
     for (let i = 1; i <= totalCount; i++) {
-      const exists = await chapterExists(ncodeLower, i);
+      const exists = downloadedSet.has(i);
       chapters.push({ num: i, downloaded: exists });
       if (exists) downloadedCount++;
     }
@@ -589,11 +594,13 @@ export default function Tsunovel() {
       return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
     }
 
-    // キャッシュがあればそれを返す（IndexedDB対応）
+    // キャッシュがあればそれを返す
     if (downloadStatuses[novel.id]) {
       return downloadStatuses[novel.id];
     }
 
+    // キャッシュがない場合、IndexedDBだと同期的には取得できないので、
+    // バックグラウンドで更新を走らせつつ、とりあえず0%かlocalStorageベースで返す
     const ncodeLower = novel.ncode.toLowerCase();
     const totalCount = novel.info?.general_all_no || 0;
 
@@ -601,19 +608,31 @@ export default function Tsunovel() {
       return { downloadedCount: 0, totalCount: 0, percentage: 0, isComplete: false, chapters: [] };
     }
 
-    // フォールバック（同期チェック）: localStorageのみ
+    // 非同期更新をスケジュール
+    setTimeout(() => {
+      updateDownloadStatusCache(novel.id);
+    }, 0);
+
+    // localStorage使用時のみ同期チェックが可能
     const chapters = [];
     let downloadedCount = 0;
 
-    for (let i = 1; i <= totalCount; i++) {
-      const key = `tsunovel_offline_${ncodeLower}_${i}`;
-      const exists = localStorage.getItem(key) !== null;
-      chapters.push({ num: i, downloaded: exists });
-      if (exists) downloadedCount++;
+    if (currentStorageType === STORAGE_TYPES.LOCAL_STORAGE) {
+      for (let i = 1; i <= totalCount; i++) {
+        const key = `tsunovel_offline_${ncodeLower}_${i}`;
+        const exists = localStorage.getItem(key) !== null;
+        chapters.push({ num: i, downloaded: exists });
+        if (exists) downloadedCount++;
+      }
+    } else {
+      // IndexedDB時はキャッシュ更新待ち
+      for (let i = 1; i <= totalCount; i++) {
+        chapters.push({ num: i, downloaded: false });
+      }
     }
 
     const percentage = Math.round((downloadedCount / totalCount) * 100);
-    const isComplete = downloadedCount === totalCount;
+    const isComplete = totalCount > 0 && downloadedCount === totalCount;
 
     return { downloadedCount, totalCount, percentage, isComplete, chapters };
   };

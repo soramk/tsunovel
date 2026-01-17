@@ -369,6 +369,73 @@ const deleteAllFromIndexedDB = async (ncode) => {
     }
 };
 
+/**
+ * Get count of downloaded chapters for a novel from IndexedDB
+ */
+const getDownloadedCountFromIndexedDB = async (ncode) => {
+    try {
+        const db = await initDB();
+        const ncodeLower = ncode.toLowerCase();
+
+        return new Promise((resolve) => {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const index = store.index('ncode');
+            const request = index.count(IDBKeyRange.only(ncodeLower));
+
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+
+            request.onerror = () => {
+                resolve(0);
+            };
+        });
+    } catch (e) {
+        return 0;
+    }
+};
+
+/**
+ * Get list of downloaded chapter numbers for a novel from IndexedDB
+ */
+const getDownloadedChaptersFromIndexedDB = async (ncode) => {
+    try {
+        const db = await initDB();
+        const ncodeLower = ncode.toLowerCase();
+
+        return new Promise((resolve) => {
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const index = store.index('ncode');
+            const request = index.openCursor(IDBKeyRange.only(ncodeLower));
+            const chapters = [];
+
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    // Extract chapter number from ID (tsunovel_offline_{ncode}_{chapterNum})
+                    const id = cursor.primaryKey;
+                    const parts = id.split('_');
+                    const chapterNum = parseInt(parts[parts.length - 1], 10);
+                    if (!isNaN(chapterNum)) {
+                        chapters.push(chapterNum);
+                    }
+                    cursor.continue();
+                } else {
+                    resolve(chapters);
+                }
+            };
+
+            request.onerror = () => {
+                resolve([]);
+            };
+        });
+    } catch (e) {
+        return [];
+    }
+};
+
 // ============================================================
 // Public API - Unified interface that automatically uses the selected storage
 // ============================================================
@@ -590,4 +657,50 @@ export const migrateToIndexedDB = async (progressCallback) => {
     }
 
     return { migrated, failed };
+};
+
+/**
+ * Get downloaded chapter count for the current storage
+ * @param {string} ncode - Novel code
+ * @returns {Promise<number>}
+ */
+export const getDownloadedChapterCount = async (ncode) => {
+    const storageType = getStorageType();
+
+    if (storageType === STORAGE_TYPES.INDEXED_DB) {
+        return await getDownloadedCountFromIndexedDB(ncode);
+    } else {
+        const prefix = `tsunovel_offline_${ncode.toLowerCase()}_`;
+        let count = 0;
+        for (const key in localStorage) {
+            if (key.startsWith(prefix)) {
+                count++;
+            }
+        }
+        return count;
+    }
+};
+
+/**
+ * Get list of downloaded chapter numbers for the current storage
+ * @param {string} ncode - Novel code
+ * @returns {Promise<number[]>}
+ */
+export const getDownloadedChapterNumbers = async (ncode) => {
+    const storageType = getStorageType();
+
+    if (storageType === STORAGE_TYPES.INDEXED_DB) {
+        return await getDownloadedChaptersFromIndexedDB(ncode);
+    } else {
+        const prefix = `tsunovel_offline_${ncode.toLowerCase()}_`;
+        const chapters = [];
+        for (const key in localStorage) {
+            if (key.startsWith(prefix)) {
+                const parts = key.split('_');
+                const num = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(num)) chapters.push(num);
+            }
+        }
+        return chapters.sort((a, b) => a - b);
+    }
 };
