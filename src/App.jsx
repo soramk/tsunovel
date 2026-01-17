@@ -1487,681 +1487,685 @@ export default function Tsunovel() {
               </div>
               <div className="flex-1 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500"></div>
             </div>
-          )}
+          )
+          }
 
           {/* --- Detail Modal --- */}
-          {selectedNovelId && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-md bg-black/60" onClick={() => setSelectedNovelId(null)}>
-              <div className="bg-[#1c2632] text-[#d7ccc8] w-full max-w-2xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-y-auto md:overflow-hidden flex flex-col md:flex-row max-h-[92vh] md:max-h-[85vh] animate-in slide-in-from-bottom-8 duration-500 border border-[#2c3e50]/50" onClick={e => e.stopPropagation()}>
-                {/* 左側: カバー画像 */}
-                <div className="w-full md:w-1/3 aspect-[2/3] md:aspect-auto bg-cover bg-center relative group"
-                  style={{ backgroundImage: `url(https://picsum.photos/seed/${selectedNovelId + 200}/300/450)` }}>
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1c2632] via-transparent to-transparent flex items-end p-4">
-                    <p className="text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase opacity-70">
-                      {novels.find(n => n.id === selectedNovelId)?.site}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 右側: 詳細情報 */}
-                <div className="flex-1 p-6 sm:p-8 flex flex-col">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-2xl font-serif font-bold leading-tight text-white">
-                          {novels.find(n => n.id === selectedNovelId)?.title}
-                        </h3>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const isFav = favorites.includes(selectedNovelId);
-                            if (isFav) {
-                              setFavorites(prev => prev.filter(id => id !== selectedNovelId));
-                            } else {
-                              setFavorites(prev => [...prev, selectedNovelId]);
-                            }
-                          }}
-                          className={`p-2 rounded-full transition-all ${favorites.includes(selectedNovelId) ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:text-pink-400 hover:bg-white/5'}`}
-                        >
-                          <Bookmark size={20} fill={favorites.includes(selectedNovelId) ? "currentColor" : "none"} />
-                        </button>
-                      </div>
-                      <p className="text-sm text-blue-300 opacity-80 italic font-serif">{novels.find(n => n.id === selectedNovelId)?.author}</p>
-                    </div>
-                    <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white">
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-visible md:overflow-y-auto mb-8 pr-2 custom-scrollbar">
-                    <div className="space-y-5">
-                      <div className="flex gap-4">
-                        <div className="bg-blue-900/40 px-3 py-1 rounded text-[10px] font-bold text-blue-200 border border-blue-700/50 shadow-sm">
-                          {novels.find(n => n.id === selectedNovelId)?.info?.general_all_no || "?"} 話
-                        </div>
-                        <div className="bg-slate-800/60 px-3 py-1 rounded text-[10px] font-bold text-slate-300 border border-slate-700/50">
-                          {(() => {
-                            const genreId = novels.find(n => n.id === selectedNovelId)?.info?.genre;
-                            return (genreId !== undefined && genreId !== null) ? (GENRE_MAP[genreId.toString()] || genreId) : "ジャンル未設定";
-                          })()}
-                        </div>
-                      </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
-                        {novels.find(n => n.id === selectedNovelId)?.info?.story || "あらすじを取得できませんでした。"}
+          {
+            selectedNovelId && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300 backdrop-blur-md bg-black/60" onClick={() => setSelectedNovelId(null)}>
+                <div className="bg-[#1c2632] text-[#d7ccc8] w-full max-w-2xl rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-y-auto md:overflow-hidden flex flex-col md:flex-row max-h-[92vh] md:max-h-[85vh] animate-in slide-in-from-bottom-8 duration-500 border border-[#2c3e50]/50" onClick={e => e.stopPropagation()}>
+                  {/* 左側: カバー画像 */}
+                  <div className="w-full md:w-1/3 aspect-[2/3] md:aspect-auto bg-cover bg-center relative group"
+                    style={{ backgroundImage: `url(https://picsum.photos/seed/${selectedNovelId + 200}/300/450)` }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1c2632] via-transparent to-transparent flex items-end p-4">
+                      <p className="text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase opacity-70">
+                        {novels.find(n => n.id === selectedNovelId)?.site}
                       </p>
+                    </div>
+                  </div>
 
-                      {/* Download Status Section */}
+                  {/* 右側: 詳細情報 */}
+                  <div className="flex-1 p-6 sm:p-8 flex flex-col">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="text-2xl font-serif font-bold leading-tight text-white">
+                            {novels.find(n => n.id === selectedNovelId)?.title}
+                          </h3>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isFav = favorites.includes(selectedNovelId);
+                              if (isFav) {
+                                setFavorites(prev => prev.filter(id => id !== selectedNovelId));
+                              } else {
+                                setFavorites(prev => [...prev, selectedNovelId]);
+                              }
+                            }}
+                            className={`p-2 rounded-full transition-all ${favorites.includes(selectedNovelId) ? 'text-pink-500 bg-pink-500/10' : 'text-slate-500 hover:text-pink-400 hover:bg-white/5'}`}
+                          >
+                            <Bookmark size={20} fill={favorites.includes(selectedNovelId) ? "currentColor" : "none"} />
+                          </button>
+                        </div>
+                        <p className="text-sm text-blue-300 opacity-80 italic font-serif">{novels.find(n => n.id === selectedNovelId)?.author}</p>
+                      </div>
+                      <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white">
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-visible md:overflow-y-auto mb-8 pr-2 custom-scrollbar">
+                      <div className="space-y-5">
+                        <div className="flex gap-4">
+                          <div className="bg-blue-900/40 px-3 py-1 rounded text-[10px] font-bold text-blue-200 border border-blue-700/50 shadow-sm">
+                            {novels.find(n => n.id === selectedNovelId)?.info?.general_all_no || "?"} 話
+                          </div>
+                          <div className="bg-slate-800/60 px-3 py-1 rounded text-[10px] font-bold text-slate-300 border border-slate-700/50">
+                            {(() => {
+                              const genreId = novels.find(n => n.id === selectedNovelId)?.info?.genre;
+                              return (genreId !== undefined && genreId !== null) ? (GENRE_MAP[genreId.toString()] || genreId) : "ジャンル未設定";
+                            })()}
+                          </div>
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
+                          {novels.find(n => n.id === selectedNovelId)?.info?.story || "あらすじを取得できませんでした。"}
+                        </p>
+
+                        {/* Download Status Section */}
+                        {(() => {
+                          const novel = novels.find(n => n.id === selectedNovelId);
+                          const downloadStatus = getDownloadStatus(novel);
+
+                          if (downloadStatus.totalCount === 0) return null;
+
+                          return (
+                            <div className="mt-6 pt-5 border-t border-slate-700/50">
+                              {/* Download Summary */}
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  {downloadStatus.isComplete ? (
+                                    <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                                      <CheckCircle2 size={18} className="text-green-400" />
+                                    </div>
+                                  ) : downloadStatus.percentage > 0 ? (
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                                      <Cloud size={18} className="text-amber-400" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center">
+                                      <CloudOff size={18} className="text-slate-500" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-xs font-bold text-white">
+                                      {downloadStatus.isComplete ? 'オフライン対応完了' : 'オフラインダウンロード'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400">
+                                      {downloadStatus.downloadedCount} / {downloadStatus.totalCount} 話ダウンロード済み
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className={`text-lg font-bold font-mono ${downloadStatus.isComplete ? 'text-green-400' : downloadStatus.percentage > 0 ? 'text-amber-400' : 'text-slate-500'
+                                  }`}>
+                                  {downloadStatus.percentage}%
+                                </span>
+                              </div>
+
+                              {/* Progress Bar */}
+                              <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-4">
+                                <div
+                                  className={`h-full transition-all duration-500 rounded-full ${downloadStatus.isComplete ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'
+                                    }`}
+                                  style={{ width: `${downloadStatus.percentage}%` }}
+                                ></div>
+                              </div>
+
+                              {/* Chapter Grid - Collapsible */}
+                              <details className="group">
+                                <summary className="cursor-pointer list-none flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                                  <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
+                                  <span>各話のダウンロード状態を表示</span>
+                                </summary>
+                                <div className="mt-3 grid grid-cols-10 gap-1 max-h-32 overflow-y-auto custom-scrollbar p-2 bg-slate-900/50 rounded-lg">
+                                  {downloadStatus.chapters.map(ch => (
+                                    <div
+                                      key={ch.num}
+                                      className={`w-full aspect-square rounded flex items-center justify-center text-[8px] font-mono font-bold transition-all ${ch.downloaded
+                                        ? 'bg-green-500/30 text-green-300 border border-green-500/30'
+                                        : 'bg-slate-800/50 text-slate-600 border border-slate-700/30'
+                                        }`}
+                                      title={ch.downloaded ? `${ch.num}話: ダウンロード済み` : `${ch.num}話: 未ダウンロード`}
+                                    >
+                                      {ch.num}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="mt-2 flex items-center gap-4 text-[9px] text-slate-500">
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded bg-green-500/50"></span> ダウンロード済み
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded bg-slate-600"></span> 未ダウンロード
+                                  </span>
+                                </div>
+                              </details>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={() => {
+                          const id = selectedNovelId;
+                          setSelectedNovelId(null);
+                          handleBookClick(id);
+                        }}
+                        className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Book size={20} />
+                        物語世界へ
+                      </button>
+
+                      <button
+                        onClick={() => predownloadNovel(selectedNovelId)}
+                        disabled={isDownloading}
+                        className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 rounded-xl shadow-[0_10px_30px_rgba(34,197,94,0.2)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Download size={18} />
+                        オフライン用にダウンロード
+                      </button>
+
+                      {/* オフラインデータ削除ボタン - ダウンロード済みデータがある場合のみ表示 */}
                       {(() => {
                         const novel = novels.find(n => n.id === selectedNovelId);
                         const downloadStatus = getDownloadStatus(novel);
+                        if (downloadStatus.downloadedCount > 0) {
+                          return (
+                            <button
+                              onClick={() => clearOfflineData(selectedNovelId)}
+                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-amber-900/30 text-amber-500/70 hover:border-amber-500 hover:text-amber-400 hover:bg-amber-500/5 transition-all font-bold text-sm"
+                            >
+                              <Trash2 size={16} />
+                              オフラインデータを削除 ({downloadStatus.downloadedCount}話分)
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()}
 
-                        if (downloadStatus.totalCount === 0) return null;
+                      <div className="flex gap-2 relative">
+                        <button
+                          onClick={() => setIsUpdateOptionsOpen(!isUpdateOptionsOpen)}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm ${isUpdateOptionsOpen ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'}`}
+                        >
+                          <Loader size={16} className={isDownloading ? 'animate-spin' : ''} />
+                          更新設定
+                        </button>
 
-                        return (
-                          <div className="mt-6 pt-5 border-t border-slate-700/50">
-                            {/* Download Summary */}
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-3">
-                                {downloadStatus.isComplete ? (
-                                  <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                                    <CheckCircle2 size={18} className="text-green-400" />
-                                  </div>
-                                ) : downloadStatus.percentage > 0 ? (
-                                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                                    <Cloud size={18} className="text-amber-400" />
-                                  </div>
-                                ) : (
-                                  <div className="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center">
-                                    <CloudOff size={18} className="text-slate-500" />
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="text-xs font-bold text-white">
-                                    {downloadStatus.isComplete ? 'オフライン対応完了' : 'オフラインダウンロード'}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
-                                    {downloadStatus.downloadedCount} / {downloadStatus.totalCount} 話ダウンロード済み
-                                  </p>
+                        <button
+                          onClick={() => handleRemoveNovel(selectedNovelId)}
+                          className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-red-900/30 text-red-400/50 hover:border-red-500 hover:text-red-500 transition-all font-bold text-sm"
+                          title="この本を削除"
+                        >
+                          <X size={16} />
+                          削除
+                        </button>
+
+                        {isUpdateOptionsOpen && (
+                          <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#1a232e] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-[#2c3e50] p-3 z-10 animate-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex flex-col gap-1.5 label-sans">
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3.5 hover:bg-blue-600/20 rounded-xl text-sm font-bold transition-colors text-slate-200">
+                                🔄 全更新 (すべての話を再取得)
+                              </button>
+                              <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3.5 hover:bg-blue-600/20 rounded-xl text-sm font-bold transition-colors text-slate-200">
+                                ✨ 未取得話（新規）のみ更新
+                              </button>
+                              <div className="p-3 border-t border-slate-700/50 mt-1.5">
+                                <p className="text-xs text-slate-500 mb-3 px-1 font-bold">特定エピソードの更新 (例: 1,5,10)</p>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="1, 2, 3..."
+                                    className="flex-1 text-sm px-4 py-2.5 bg-slate-900/50 border border-slate-700 rounded-xl outline-none focus:border-blue-500/50 transition-all font-mono text-white"
+                                    value={updateEpisodesInput}
+                                    onChange={(e) => setUpdateEpisodesInput(e.target.value)}
+                                  />
+                                  <button
+                                    onClick={() => handleSyncNovel(selectedNovelId, 'specific', updateEpisodesInput)}
+                                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-md transition-all active:scale-95"
+                                  >
+                                    実行
+                                  </button>
                                 </div>
                               </div>
-                              <span className={`text-lg font-bold font-mono ${downloadStatus.isComplete ? 'text-green-400' : downloadStatus.percentage > 0 ? 'text-amber-400' : 'text-slate-500'
-                                }`}>
-                                {downloadStatus.percentage}%
-                              </span>
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-4">
-                              <div
-                                className={`h-full transition-all duration-500 rounded-full ${downloadStatus.isComplete ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-amber-500 to-amber-400'
-                                  }`}
-                                style={{ width: `${downloadStatus.percentage}%` }}
-                              ></div>
-                            </div>
-
-                            {/* Chapter Grid - Collapsible */}
-                            <details className="group">
-                              <summary className="cursor-pointer list-none flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
-                                <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
-                                <span>各話のダウンロード状態を表示</span>
-                              </summary>
-                              <div className="mt-3 grid grid-cols-10 gap-1 max-h-32 overflow-y-auto custom-scrollbar p-2 bg-slate-900/50 rounded-lg">
-                                {downloadStatus.chapters.map(ch => (
-                                  <div
-                                    key={ch.num}
-                                    className={`w-full aspect-square rounded flex items-center justify-center text-[8px] font-mono font-bold transition-all ${ch.downloaded
-                                      ? 'bg-green-500/30 text-green-300 border border-green-500/30'
-                                      : 'bg-slate-800/50 text-slate-600 border border-slate-700/30'
-                                      }`}
-                                    title={ch.downloaded ? `${ch.num}話: ダウンロード済み` : `${ch.num}話: 未ダウンロード`}
-                                  >
-                                    {ch.num}
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="mt-2 flex items-center gap-4 text-[9px] text-slate-500">
-                                <span className="flex items-center gap-1">
-                                  <span className="w-2 h-2 rounded bg-green-500/50"></span> ダウンロード済み
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <span className="w-2 h-2 rounded bg-slate-600"></span> 未ダウンロード
-                                </span>
-                              </div>
-                            </details>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    <button
-                      onClick={() => {
-                        const id = selectedNovelId;
-                        setSelectedNovelId(null);
-                        handleBookClick(id);
-                      }}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-4 rounded-xl shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      <Book size={20} />
-                      物語世界へ
-                    </button>
-
-                    <button
-                      onClick={() => predownloadNovel(selectedNovelId)}
-                      disabled={isDownloading}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-3 rounded-xl shadow-[0_10px_30px_rgba(34,197,94,0.2)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                    >
-                      <Download size={18} />
-                      オフライン用にダウンロード
-                    </button>
-
-                    {/* オフラインデータ削除ボタン - ダウンロード済みデータがある場合のみ表示 */}
-                    {(() => {
-                      const novel = novels.find(n => n.id === selectedNovelId);
-                      const downloadStatus = getDownloadStatus(novel);
-                      if (downloadStatus.downloadedCount > 0) {
-                        return (
-                          <button
-                            onClick={() => clearOfflineData(selectedNovelId)}
-                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-amber-900/30 text-amber-500/70 hover:border-amber-500 hover:text-amber-400 hover:bg-amber-500/5 transition-all font-bold text-sm"
-                          >
-                            <Trash2 size={16} />
-                            オフラインデータを削除 ({downloadStatus.downloadedCount}話分)
-                          </button>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    <div className="flex gap-2 relative">
-                      <button
-                        onClick={() => setIsUpdateOptionsOpen(!isUpdateOptionsOpen)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm ${isUpdateOptionsOpen ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'}`}
-                      >
-                        <Loader size={16} className={isDownloading ? 'animate-spin' : ''} />
-                        更新設定
-                      </button>
-
-                      <button
-                        onClick={() => handleRemoveNovel(selectedNovelId)}
-                        className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-red-900/30 text-red-400/50 hover:border-red-500 hover:text-red-500 transition-all font-bold text-sm"
-                        title="この本を削除"
-                      >
-                        <X size={16} />
-                        削除
-                      </button>
-
-                      {isUpdateOptionsOpen && (
-                        <div className="absolute bottom-full left-0 right-0 mb-3 bg-[#1a232e] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-[#2c3e50] p-3 z-10 animate-in slide-in-from-bottom-2 duration-200">
-                          <div className="flex flex-col gap-1.5 label-sans">
-                            <button onClick={() => handleSyncNovel(selectedNovelId, 'full')} className="w-full text-left px-4 py-3.5 hover:bg-blue-600/20 rounded-xl text-sm font-bold transition-colors text-slate-200">
-                              🔄 全更新 (すべての話を再取得)
-                            </button>
-                            <button onClick={() => handleSyncNovel(selectedNovelId, 'new')} className="w-full text-left px-4 py-3.5 hover:bg-blue-600/20 rounded-xl text-sm font-bold transition-colors text-slate-200">
-                              ✨ 未取得話（新規）のみ更新
-                            </button>
-                            <div className="p-3 border-t border-slate-700/50 mt-1.5">
-                              <p className="text-xs text-slate-500 mb-3 px-1 font-bold">特定エピソードの更新 (例: 1,5,10)</p>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="1, 2, 3..."
-                                  className="flex-1 text-sm px-4 py-2.5 bg-slate-900/50 border border-slate-700 rounded-xl outline-none focus:border-blue-500/50 transition-all font-mono text-white"
-                                  value={updateEpisodesInput}
-                                  onChange={(e) => setUpdateEpisodesInput(e.target.value)}
-                                />
-                                <button
-                                  onClick={() => handleSyncNovel(selectedNovelId, 'specific', updateEpisodesInput)}
-                                  className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-500 shadow-md transition-all active:scale-95"
-                                >
-                                  実行
-                                </button>
-                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )
+          }
+        </div >
       )}
 
       {/* --- Reader Mode --- */}
-      {viewMode === 'reader' && (
-        <div className="bg-[#f3f0e9] min-h-screen animate-in fade-in duration-1000">
-          {/* Top Reader Bar */}
-          <div className="fixed top-0 left-0 right-0 h-14 bg-[#f3f0e9]/95 backdrop-blur border-b border-[#e5e0d0] flex items-center justify-between px-4 z-20 transition-all">
-            <button
-              onClick={() => setIsTocOpen(!isTocOpen)}
-              className={`p-2 rounded-lg transition-colors ${isTocOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
-              title="目次"
-            >
-              <List size={20} />
-            </button>
-            {readerSettings.showHeaderTitle && (
-              <div className="text-sm font-bold text-gray-800 font-serif tracking-wide truncate max-w-[200px] sm:max-w-md">
-                {novels.find(n => n.id === currentNovelId)?.title}
-              </div>
-            )}
-            <div className="relative" ref={settingsRef}>
+      {
+        viewMode === 'reader' && (
+          <div className="bg-[#f3f0e9] min-h-screen animate-in fade-in duration-1000">
+            {/* Top Reader Bar */}
+            <div className="fixed top-0 left-0 right-0 h-14 bg-[#f3f0e9]/95 backdrop-blur border-b border-[#e5e0d0] flex items-center justify-between px-4 z-20 transition-all">
               <button
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className={`p-2 rounded-lg transition-colors ${isSettingsOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
-                title="表示設定"
+                onClick={() => setIsTocOpen(!isTocOpen)}
+                className={`p-2 rounded-lg transition-colors ${isTocOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
+                title="目次"
               >
-                <Settings size={20} />
+                <List size={20} />
               </button>
-              {isSettingsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-30 transition-all animate-in zoom-in-95 duration-200">
-                  <div className="space-y-6">
-                    {/* テーマ設定 */}
-                    <div>
-                      <div className="flex justify-between items-center mb-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">テーマ</label>
-                        <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded text-gray-500">{readerSettings.theme}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { id: 'light', icon: Sun, label: 'ライト', class: 'bg-white text-gray-800' },
-                          { id: 'sepia', icon: Coffee, label: 'セピア', class: 'bg-[#f4ecd8] text-[#5b4636]' },
-                          { id: 'dark', icon: Moon, label: 'ダーク', class: 'bg-gray-800 text-gray-100' },
-                          { id: 'midnight', icon: Sparkles, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
-                          { id: 'ivory', icon: Type, label: 'アイボ', class: 'bg-[#fffff0] text-[#2d241e]' },
-                          { id: 'softgreen', icon: Book, label: 'グリーン', class: 'bg-[#f0f9f0] text-[#2d4a2d]' },
-                          { id: 'ocean', icon: Waves, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
-                          { id: 'forest', icon: TreePine, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
-                          { id: 'paper', icon: FileText, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
-                          { id: 'coffee-deep', icon: Coffee, label: '珈琲', class: 'bg-[#3e2723] text-[#d7ccc8]' },
-                        ].map(t => (
-                          <button
-                            key={t.id}
-                            onClick={() => setReaderSettings({ ...readerSettings, theme: t.id })}
-                            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${readerSettings.theme === t.id ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent hover:bg-gray-50'}`}
-                          >
-                            <div className={`w-12 h-12 rounded-xl mb-2 flex items-center justify-center shadow-md ${t.class} border border-gray-200`}>
-                              <t.icon size={24} />
-                            </div>
-                            <span className="text-xs font-bold">{t.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* フォント設定 */}
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">フォント</label>
-                      <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
-                        {[
-                          { id: 'serif', label: '標準明朝', font: 'font-serif' },
-                          { id: 'sans', label: '標準ゴシック', font: 'font-sans' },
-                          { id: 'noto-serif', label: 'Noto Serif', font: 'font-serif' },
-                          { id: 'noto-sans', label: 'Noto Sans', font: 'font-sans' },
-                          { id: 'mplus', label: 'M PLUS', font: 'font-sans' },
-                          { id: 'zen-kaku', label: 'Zen Kaku', font: 'font-sans' },
-                          { id: 'kaisei', label: 'Kaisei', font: 'font-serif' },
-                          { id: 'shippori', label: 'Shippori', font: 'font-serif' },
-                          { id: 'hina', label: 'Hina', font: 'font-serif' },
-                          { id: 'dotgothic', label: 'DotGothic', font: 'font-sans' },
-                          { id: 'courier', label: 'Courier', font: 'font-mono' },
-                        ].map(f => (
-                          <button
-                            key={f.id}
-                            onClick={() => setReaderSettings({ ...readerSettings, fontFamily: f.id })}
-                            className={`py-2 px-2 rounded-md text-xs transition-all ${readerSettings.fontFamily === f.id ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
-                          >
-                            <span className={f.font}>{f.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 文字色設定 */}
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字色</label>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setReaderSettings({ ...readerSettings, textColor: '' })}
-                          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${readerSettings.textColor === '' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white text-gray-400'}`}
-                          title="テーマのデフォルト色を使用"
-                        >
-                          自動
-                        </button>
-                        {[
-                          '#000000', '#333333', '#666666', '#999999',
-                          '#d7ccc8', '#5b4636', '#1b5e20', '#004d40',
-                          '#0d47a1', '#b71c1c'
-                        ].map(color => (
-                          <button
-                            key={color}
-                            onClick={() => setReaderSettings({ ...readerSettings, textColor: color })}
-                            className={`w-8 h-8 rounded-full border-2 transition-all ${readerSettings.textColor === color ? 'border-indigo-500 scale-110' : 'border-transparent opacity-80 hover:opacity-100'}`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                        <div className="relative group">
-                          <input
-                            type="color"
-                            value={readerSettings.textColor || '#000000'}
-                            onChange={(e) => setReaderSettings({ ...readerSettings, textColor: e.target.value })}
-                            className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer overflow-hidden p-0"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 文字サイズと行間 */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字サイズ</label>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.max(12, readerSettings.fontSize - 1) })}
-                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                            title="小さく"
-                          >
-                            <Minus size={18} />
-                          </button>
-                          <input
-                            type="range"
-                            min="12"
-                            max="40"
-                            value={readerSettings.fontSize}
-                            onChange={(e) => setReaderSettings({ ...readerSettings, fontSize: parseInt(e.target.value) })}
-                            className="flex-1 accent-indigo-600 h-2"
-                          />
-                          <button
-                            onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.min(40, readerSettings.fontSize + 1) })}
-                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                            title="大きく"
-                          >
-                            <Plus size={18} />
-                          </button>
-                          <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">行間</label>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(0.5, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
-                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                            title="狭く"
-                          >
-                            <Minus size={18} />
-                          </button>
-                          <input
-                            type="range"
-                            min="0.5"
-                            max="3.0"
-                            step="0.1"
-                            value={readerSettings.lineHeight}
-                            onChange={(e) => setReaderSettings({ ...readerSettings, lineHeight: parseFloat(e.target.value) })}
-                            className="flex-1 accent-indigo-600 h-2"
-                          />
-                          <button
-                            onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.min(3.0, Math.round((readerSettings.lineHeight + 0.1) * 10) / 10) })}
-                            className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
-                            title="広く"
-                          >
-                            <Plus size={18} />
-                          </button>
-                          <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 遷移設定 */}
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
-                        <MousePointer2 size={12} />
-                        次の話への遷移
-                      </label>
-                      <div className="flex bg-gray-100 rounded-lg p-1">
-                        <button
-                          onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'button' })}
-                          className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'button' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
-                        >
-                          ボタン
-                        </button>
-                        <button
-                          onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'scroll' })}
-                          className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'scroll' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
-                        >
-                          スクロール
-                        </button>
-                      </div>
-                      {readerSettings.transitionMode === 'button' && (
-                        <div className="mt-3 flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <label className="text-xs text-gray-600 font-medium">タイトルを毎回表示</label>
-                          <button
-                            onClick={() => setReaderSettings({ ...readerSettings, showTitleOnTransition: !readerSettings.showTitleOnTransition })}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${readerSettings.showTitleOnTransition ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                          >
-                            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${readerSettings.showTitleOnTransition ? 'translate-x-5' : ''}`}></div>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ヘッダー表示設定 */}
-                    <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
-                        <Type size={12} />
-                        表示オプション
-                      </label>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <label className="text-xs text-gray-600 font-medium">ヘッダー・フッターにタイトル表示</label>
-                        <button
-                          onClick={() => setReaderSettings({ ...readerSettings, showHeaderTitle: !readerSettings.showHeaderTitle })}
-                          className={`relative w-11 h-6 rounded-full transition-colors ${readerSettings.showHeaderTitle ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                        >
-                          <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${readerSettings.showHeaderTitle ? 'translate-x-5' : ''}`}></div>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+              {readerSettings.showHeaderTitle && (
+                <div className="text-sm font-bold text-gray-800 font-serif tracking-wide truncate max-w-[200px] sm:max-w-md">
+                  {novels.find(n => n.id === currentNovelId)?.title}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* TOC Sidenav */}
-          {isTocOpen && (
-            <div
-              className="fixed inset-0 z-40 flex"
-              onClick={() => setIsTocOpen(false)}
-            >
-              <div
-                className="w-80 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                  <h3 className="font-serif font-bold text-xl text-gray-800">目次</h3>
-                  <button onClick={() => setIsTocOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
-                    <X size={24} />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2">
-                  {currentNovel?.info?.general_all_no ? (
-                    Array.from({ length: currentNovel.info.general_all_no }, (_, i) => i + 1).map(num => (
-                      <button
-                        key={num}
-                        onClick={() => {
-                          loadChapter(currentNovelId, num);
-                          setIsTocOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-all flex items-center justify-between group ${currentChapter === num ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        <span className="flex items-center gap-3">
-                          <span className={`w-6 text-[10px] flex items-center justify-center rounded ${currentChapter === num ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
-                            {num}
-                          </span>
-                          第 {num} 話
-                        </span>
-                        {bookmarks[currentNovelId] === num && (
-                          <Bookmark size={12} className="text-indigo-400Fill" />
-                        )}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-gray-400 italic text-sm">
-                      話数情報がありません
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 bg-black/40 backdrop-blur-sm"></div>
-            </div>
-          )}
-
-          {/* Bottom Reader Navigation */}
-          <footer className={`fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-current/10 flex items-center justify-center transition-colors duration-300 backdrop-blur-md bg-opacity-90 ${getReaderStyles().className.replace(/max-w-3xl|mx-auto|p-8|min-h-screen/g, '')}`}>
-            <div className="max-w-2xl w-full flex items-center justify-between px-6">
-              <div className="flex items-center gap-2">
+              <div className="relative" ref={settingsRef}>
                 <button
-                  onClick={() => setViewMode('library')}
-                  className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all"
-                  title="ライブラリに戻る"
-                >
-                  <Home size={20} />
-                </button>
-                <button
-                  onClick={prevChapter}
-                  disabled={currentChapter <= 1}
-                  className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
-                  title="前の話"
-                >
-                  <ArrowLeft size={20} />
-                </button>
-              </div>
-
-              <div className="flex flex-col items-center">
-                {readerSettings.showHeaderTitle && (
-                  <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 uppercase truncate max-w-[120px]">
-                    {currentNovel?.title}
-                  </span>
-                )}
-                <span className="text-sm font-serif font-bold italic">
-                  {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={nextChapter}
-                  disabled={!currentNovel || currentChapter >= (currentNovel.info?.general_all_no || 0)}
-                  className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
-                  title="次の話"
-                >
-                  <ArrowRight size={20} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsSettingsOpen(!isSettingsOpen);
-                  }}
-                  className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all shadow-sm"
-                  title="設定"
+                  onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                  className={`p-2 rounded-lg transition-colors ${isSettingsOpen ? 'bg-indigo-100 text-indigo-600' : 'text-gray-600 hover:bg-[#e5e0d0]'}`}
+                  title="表示設定"
                 >
                   <Settings size={20} />
                 </button>
+                {isSettingsOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-80 max-h-[80vh] overflow-y-auto bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-30 transition-all animate-in zoom-in-95 duration-200">
+                    <div className="space-y-6">
+                      {/* テーマ設定 */}
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">テーマ</label>
+                          <span className="text-[10px] px-2 py-0.5 bg-gray-100 rounded text-gray-500">{readerSettings.theme}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { id: 'light', icon: Sun, label: 'ライト', class: 'bg-white text-gray-800' },
+                            { id: 'sepia', icon: Coffee, label: 'セピア', class: 'bg-[#f4ecd8] text-[#5b4636]' },
+                            { id: 'dark', icon: Moon, label: 'ダーク', class: 'bg-gray-800 text-gray-100' },
+                            { id: 'midnight', icon: Sparkles, label: 'ミッド', class: 'bg-[#0f172a] text-[#94a3b8]' },
+                            { id: 'ivory', icon: Type, label: 'アイボ', class: 'bg-[#fffff0] text-[#2d241e]' },
+                            { id: 'softgreen', icon: Book, label: 'グリーン', class: 'bg-[#f0f9f0] text-[#2d4a2d]' },
+                            { id: 'ocean', icon: Waves, label: 'オーシャン', class: 'bg-[#e0f2f1] text-[#004d40]' },
+                            { id: 'forest', icon: TreePine, label: '森', class: 'bg-[#e8f5e9] text-[#1b5e20]' },
+                            { id: 'paper', icon: FileText, label: '紙', class: 'bg-[#fafafa] text-[#424242]' },
+                            { id: 'coffee-deep', icon: Coffee, label: '珈琲', class: 'bg-[#3e2723] text-[#d7ccc8]' },
+                          ].map(t => (
+                            <button
+                              key={t.id}
+                              onClick={() => setReaderSettings({ ...readerSettings, theme: t.id })}
+                              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${readerSettings.theme === t.id ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent hover:bg-gray-50'}`}
+                            >
+                              <div className={`w-12 h-12 rounded-xl mb-2 flex items-center justify-center shadow-md ${t.class} border border-gray-200`}>
+                                <t.icon size={24} />
+                              </div>
+                              <span className="text-xs font-bold">{t.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* フォント設定 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">フォント</label>
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
+                          {[
+                            { id: 'serif', label: '標準明朝', font: 'font-serif' },
+                            { id: 'sans', label: '標準ゴシック', font: 'font-sans' },
+                            { id: 'noto-serif', label: 'Noto Serif', font: 'font-serif' },
+                            { id: 'noto-sans', label: 'Noto Sans', font: 'font-sans' },
+                            { id: 'mplus', label: 'M PLUS', font: 'font-sans' },
+                            { id: 'zen-kaku', label: 'Zen Kaku', font: 'font-sans' },
+                            { id: 'kaisei', label: 'Kaisei', font: 'font-serif' },
+                            { id: 'shippori', label: 'Shippori', font: 'font-serif' },
+                            { id: 'hina', label: 'Hina', font: 'font-serif' },
+                            { id: 'dotgothic', label: 'DotGothic', font: 'font-sans' },
+                            { id: 'courier', label: 'Courier', font: 'font-mono' },
+                          ].map(f => (
+                            <button
+                              key={f.id}
+                              onClick={() => setReaderSettings({ ...readerSettings, fontFamily: f.id })}
+                              className={`py-2 px-2 rounded-md text-xs transition-all ${readerSettings.fontFamily === f.id ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
+                            >
+                              <span className={f.font}>{f.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 文字色設定 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字色</label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, textColor: '' })}
+                            className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${readerSettings.textColor === '' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white text-gray-400'}`}
+                            title="テーマのデフォルト色を使用"
+                          >
+                            自動
+                          </button>
+                          {[
+                            '#000000', '#333333', '#666666', '#999999',
+                            '#d7ccc8', '#5b4636', '#1b5e20', '#004d40',
+                            '#0d47a1', '#b71c1c'
+                          ].map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setReaderSettings({ ...readerSettings, textColor: color })}
+                              className={`w-8 h-8 rounded-full border-2 transition-all ${readerSettings.textColor === color ? 'border-indigo-500 scale-110' : 'border-transparent opacity-80 hover:opacity-100'}`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                          <div className="relative group">
+                            <input
+                              type="color"
+                              value={readerSettings.textColor || '#000000'}
+                              onChange={(e) => setReaderSettings({ ...readerSettings, textColor: e.target.value })}
+                              className="w-8 h-8 rounded-full border-2 border-gray-200 cursor-pointer overflow-hidden p-0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 文字サイズと行間 */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">文字サイズ</label>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.max(12, readerSettings.fontSize - 1) })}
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="小さく"
+                            >
+                              <Minus size={18} />
+                            </button>
+                            <input
+                              type="range"
+                              min="12"
+                              max="40"
+                              value={readerSettings.fontSize}
+                              onChange={(e) => setReaderSettings({ ...readerSettings, fontSize: parseInt(e.target.value) })}
+                              className="flex-1 accent-indigo-600 h-2"
+                            />
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, fontSize: Math.min(40, readerSettings.fontSize + 1) })}
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="大きく"
+                            >
+                              <Plus size={18} />
+                            </button>
+                            <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.fontSize}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">行間</label>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.max(0.5, Math.round((readerSettings.lineHeight - 0.1) * 10) / 10) })}
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="狭く"
+                            >
+                              <Minus size={18} />
+                            </button>
+                            <input
+                              type="range"
+                              min="0.5"
+                              max="3.0"
+                              step="0.1"
+                              value={readerSettings.lineHeight}
+                              onChange={(e) => setReaderSettings({ ...readerSettings, lineHeight: parseFloat(e.target.value) })}
+                              className="flex-1 accent-indigo-600 h-2"
+                            />
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, lineHeight: Math.min(3.0, Math.round((readerSettings.lineHeight + 0.1) * 10) / 10) })}
+                              className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md active:scale-95"
+                              title="広く"
+                            >
+                              <Plus size={18} />
+                            </button>
+                            <span className="text-sm font-mono w-6 text-right font-bold text-indigo-600">{readerSettings.lineHeight}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 遷移設定 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                          <MousePointer2 size={12} />
+                          次の話への遷移
+                        </label>
+                        <div className="flex bg-gray-100 rounded-lg p-1">
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'button' })}
+                            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'button' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
+                          >
+                            ボタン
+                          </button>
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, transitionMode: 'scroll' })}
+                            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${readerSettings.transitionMode === 'scroll' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-600'}`}
+                          >
+                            スクロール
+                          </button>
+                        </div>
+                        {readerSettings.transitionMode === 'button' && (
+                          <div className="mt-3 flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <label className="text-xs text-gray-600 font-medium">タイトルを毎回表示</label>
+                            <button
+                              onClick={() => setReaderSettings({ ...readerSettings, showTitleOnTransition: !readerSettings.showTitleOnTransition })}
+                              className={`relative w-11 h-6 rounded-full transition-colors ${readerSettings.showTitleOnTransition ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                            >
+                              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${readerSettings.showTitleOnTransition ? 'translate-x-5' : ''}`}></div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ヘッダー表示設定 */}
+                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                          <Type size={12} />
+                          表示オプション
+                        </label>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <label className="text-xs text-gray-600 font-medium">ヘッダー・フッターにタイトル表示</label>
+                          <button
+                            onClick={() => setReaderSettings({ ...readerSettings, showHeaderTitle: !readerSettings.showHeaderTitle })}
+                            className={`relative w-11 h-6 rounded-full transition-colors ${readerSettings.showHeaderTitle ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                          >
+                            <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${readerSettings.showHeaderTitle ? 'translate-x-5' : ''}`}></div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </footer>
 
-          {/* Reader Content */}
-          <div className={`${getReaderStyles().className} pt-24`} style={getReaderStyles().style}>
-            <div className="max-w-2xl mx-auto pb-32">
-              {(readerSettings.transitionMode === 'scroll' || (readerSettings.transitionMode === 'button' && readerSettings.showTitleOnTransition)) && (
-                <div className="mb-12 text-center border-b border-current/10 pb-8">
-                  <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
-                    {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
-                  </span>
-                  <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
-                    {novels.find(n => n.id === currentNovelId)?.title}
-                  </h1>
-                  <p className="text-sm opacity-60">
-                    著者: {novels.find(n => n.id === currentNovelId)?.author}
-                  </p>
-                </div>
-              )}
-
-              {isLoadingChapter && readerChapters.length === 0 ? (
-                <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
-                  <Loader className="animate-spin" />
-                  <p>読み込み中...</p>
-                </div>
-              ) : (
-                <div className="space-y-16">
-                  {readerChapters.map((chapter, idx) => (
-                    <article
-                      key={`${chapter.chapterNum}-${idx}`}
-                      className="reader-chapter-section"
-                      data-chapter={chapter.chapterNum}
-                    >
-                      {/* 章の境界線（2つ目以降の章のみ表示） */}
-                      {idx > 0 && (
-                        <div className="flex items-center gap-4 mb-16 opacity-30">
-                          <div className="h-[1px] flex-1 bg-current"></div>
-                          <span className="text-[10px] font-bold tracking-widest uppercase">Chapter {chapter.chapterNum}</span>
-                          <div className="h-[1px] flex-1 bg-current"></div>
-                        </div>
-                      )}
-
-                      <div className="whitespace-pre-wrap text-justify">
-                        {chapter.content}
+            {/* TOC Sidenav */}
+            {isTocOpen && (
+              <div
+                className="fixed inset-0 z-40 flex"
+                onClick={() => setIsTocOpen(false)}
+              >
+                <div
+                  className="w-80 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                    <h3 className="font-serif font-bold text-xl text-gray-800">目次</h3>
+                    <button onClick={() => setIsTocOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2">
+                    {currentNovel?.info?.general_all_no ? (
+                      Array.from({ length: currentNovel.info.general_all_no }, (_, i) => i + 1).map(num => (
+                        <button
+                          key={num}
+                          onClick={() => {
+                            loadChapter(currentNovelId, num);
+                            setIsTocOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-all flex items-center justify-between group ${currentChapter === num ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                        >
+                          <span className="flex items-center gap-3">
+                            <span className={`w-6 text-[10px] flex items-center justify-center rounded ${currentChapter === num ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'}`}>
+                              {num}
+                            </span>
+                            第 {num} 話
+                          </span>
+                          {bookmarks[currentNovelId] === num && (
+                            <Bookmark size={12} className="text-indigo-400Fill" />
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400 italic text-sm">
+                        話数情報がありません
                       </div>
-                    </article>
-                  ))}
-
-                  {isLoadingChapter && (
-                    <div className="py-10 flex items-center justify-center gap-3 opacity-30 text-sm italic">
-                      <Loader className="animate-spin" size={16} />
-                      <span>次の話を読み込み中...</span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              )}
+                <div className="flex-1 bg-black/40 backdrop-blur-sm"></div>
+              </div>
+            )}
 
-              {/* Navigation */}
-              {!isLoadingChapter && novels.find(n => n.id === currentNovelId)?.info?.noveltype !== 2 && (
-                <div className="mt-20 pt-10 border-t border-current/10 flex items-center justify-between">
+            {/* Bottom Reader Navigation */}
+            <footer className={`fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-current/10 flex items-center justify-center transition-colors duration-300 backdrop-blur-md bg-opacity-90 ${getReaderStyles().className.replace(/max-w-3xl|mx-auto|p-8|min-h-screen/g, '')}`}>
+              <div className="max-w-2xl w-full flex items-center justify-between px-6">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode('library')}
+                    className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all"
+                    title="ライブラリに戻る"
+                  >
+                    <Home size={20} />
+                  </button>
                   <button
                     onClick={prevChapter}
                     disabled={currentChapter <= 1}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
+                    className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                    title="前の話"
                   >
-                    <ArrowLeft size={18} />
-                    前の話
-                  </button>
-                  <span className="text-sm opacity-50 font-bold">
-                    {currentChapter} / {novels.find(n => n.id === currentNovelId)?.info?.general_all_no || '?'}
-                  </span>
-                  <button
-                    onClick={nextChapter}
-                    disabled={currentChapter >= (novels.find(n => n.id === currentNovelId)?.info?.general_all_no || 0)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
-                  >
-                    次の話
-                    <ArrowRight size={18} />
+                    <ArrowLeft size={20} />
                   </button>
                 </div>
-              )}
 
-              <div className="mt-20 flex justify-center opacity-50">
-                <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
-                <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
-                <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
+                <div className="flex flex-col items-center">
+                  {readerSettings.showHeaderTitle && (
+                    <span className="text-[10px] font-bold tracking-[0.2em] opacity-40 uppercase truncate max-w-[120px]">
+                      {currentNovel?.title}
+                    </span>
+                  )}
+                  <span className="text-sm font-serif font-bold italic">
+                    {currentChapter} / {currentNovel?.info?.general_all_no || '?'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={nextChapter}
+                    disabled={!currentNovel || currentChapter >= (currentNovel.info?.general_all_no || 0)}
+                    className="w-10 h-10 rounded-full border border-current flex items-center justify-center disabled:opacity-20 hover:bg-current hover:text-white transition-all shadow-sm"
+                    title="次の話"
+                  >
+                    <ArrowRight size={20} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsSettingsOpen(!isSettingsOpen);
+                    }}
+                    className="w-10 h-10 rounded-full border border-current/20 flex items-center justify-center hover:bg-current hover:text-white transition-all shadow-sm"
+                    title="設定"
+                  >
+                    <Settings size={20} />
+                  </button>
+                </div>
+              </div>
+            </footer>
+
+            {/* Reader Content */}
+            <div className={`${getReaderStyles().className} pt-24`} style={getReaderStyles().style}>
+              <div className="max-w-2xl mx-auto pb-32">
+                {(readerSettings.transitionMode === 'scroll' || (readerSettings.transitionMode === 'button' && readerSettings.showTitleOnTransition)) && (
+                  <div className="mb-12 text-center border-b border-current/10 pb-8">
+                    <span className="text-xs font-bold tracking-[0.2em] opacity-50 uppercase block mb-2">
+                      {novels.find(n => n.id === currentNovelId)?.info?.noveltype === 2 ? 'Short Story' : `Chapter ${currentChapter}`}
+                    </span>
+                    <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">
+                      {novels.find(n => n.id === currentNovelId)?.title}
+                    </h1>
+                    <p className="text-sm opacity-60">
+                      著者: {novels.find(n => n.id === currentNovelId)?.author}
+                    </p>
+                  </div>
+                )}
+
+                {isLoadingChapter && readerChapters.length === 0 ? (
+                  <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
+                    <Loader className="animate-spin" />
+                    <p>読み込み中...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-16">
+                    {readerChapters.map((chapter, idx) => (
+                      <article
+                        key={`${chapter.chapterNum}-${idx}`}
+                        className="reader-chapter-section"
+                        data-chapter={chapter.chapterNum}
+                      >
+                        {/* 章の境界線（2つ目以降の章のみ表示） */}
+                        {idx > 0 && (
+                          <div className="flex items-center gap-4 mb-16 opacity-30">
+                            <div className="h-[1px] flex-1 bg-current"></div>
+                            <span className="text-[10px] font-bold tracking-widest uppercase">Chapter {chapter.chapterNum}</span>
+                            <div className="h-[1px] flex-1 bg-current"></div>
+                          </div>
+                        )}
+
+                        <div className="whitespace-pre-wrap text-justify">
+                          {chapter.content}
+                        </div>
+                      </article>
+                    ))}
+
+                    {isLoadingChapter && (
+                      <div className="py-10 flex items-center justify-center gap-3 opacity-30 text-sm italic">
+                        <Loader className="animate-spin" size={16} />
+                        <span>次の話を読み込み中...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Navigation */}
+                {!isLoadingChapter && novels.find(n => n.id === currentNovelId)?.info?.noveltype !== 2 && (
+                  <div className="mt-20 pt-10 border-t border-current/10 flex items-center justify-between">
+                    <button
+                      onClick={prevChapter}
+                      disabled={currentChapter <= 1}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
+                    >
+                      <ArrowLeft size={18} />
+                      前の話
+                    </button>
+                    <span className="text-sm opacity-50 font-bold">
+                      {currentChapter} / {novels.find(n => n.id === currentNovelId)?.info?.general_all_no || '?'}
+                    </span>
+                    <button
+                      onClick={nextChapter}
+                      disabled={currentChapter >= (novels.find(n => n.id === currentNovelId)?.info?.general_all_no || 0)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-current/5 disabled:opacity-20 transition-all font-bold"
+                    >
+                      次の話
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-20 flex justify-center opacity-50">
+                  <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
+                  <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
+                  <div className="w-2 h-2 rounded-full bg-current mx-1"></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )
+        )
       }
 
       {/* --- Settings Mode --- */}
@@ -2309,6 +2313,109 @@ export default function Tsunovel() {
                 </div>
               </section>
 
+              {/* オフラインストレージ設定 */}
+              <section className="bg-[#1c2632] rounded-3xl p-8 sm:p-10 border border-[#2c3e50]/50 shadow-[0_20px_50px_rgba(0,0,0,0.4)] relative z-10">
+                <div className="flex items-center gap-4 mb-8 border-b border-[#2c3e50] pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-inner">
+                    <Database size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold font-serif text-white">オフラインストレージ設定</h3>
+                    <p className="text-xs text-slate-500 font-serif italic mt-1">取得済みデータの保存先と容量の管理</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {Object.values(STORAGE_TYPES).map(type => {
+                      const info = STORAGE_INFO[type];
+                      const isSelected = currentStorageType === type;
+                      const isDisabled = type === STORAGE_TYPES.INDEXED_DB && !isIndexedDBAvailable();
+
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => !isDisabled && handleStorageTypeChange(type)}
+                          disabled={isDisabled}
+                          className={`text-left p-5 rounded-2xl border-2 transition-all group relative ${isSelected
+                            ? 'border-emerald-500 bg-emerald-500/5 text-emerald-100'
+                            : isDisabled
+                              ? 'border-[#2c3e50]/30 opacity-40 cursor-not-allowed'
+                              : 'border-[#2c3e50] hover:border-emerald-500/30 hover:bg-white/5'
+                            }`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className={`p-2 rounded-xl ${isSelected ? 'bg-emerald-500/20' : 'bg-[#141d26]'}`}>
+                              {type === STORAGE_TYPES.INDEXED_DB ? <Database size={18} /> : <HardDrive size={18} />}
+                            </div>
+                            {isSelected && <CheckCircle2 size={16} className="text-emerald-400" />}
+                          </div>
+                          <p className="font-bold text-sm mb-1">{info.displayName}</p>
+                          <p className="text-[10px] opacity-60 mb-3">容量目安: {info.capacity}</p>
+                          <p className="text-[10px] leading-relaxed opacity-40 group-hover:opacity-80 transition-opacity">
+                            {info.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* ストレージ統計詳細 */}
+                  <div className="p-6 bg-[#141d26] rounded-2xl border border-[#2c3e50]">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Info size={16} className="text-blue-400" />
+                        <p className="text-sm font-bold text-white">使用状況の詳細</p>
+                      </div>
+                      <button
+                        onClick={refreshStorageStats}
+                        className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        情報を更新
+                      </button>
+                    </div>
+
+                    {!storageStats ? (
+                      <button
+                        onClick={refreshStorageStats}
+                        className="w-full py-4 text-xs italic text-slate-500 hover:text-slate-300"
+                      >
+                        クリックしてストレージ情報を取得...
+                      </button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between text-[10px] mb-2">
+                            <span className="text-slate-500 font-bold uppercase tracking-widest">Storage Usage</span>
+                            <span className="text-slate-300 font-mono">{storageStats.usedFormatted} / {storageStats.quotaFormatted}</span>
+                          </div>
+                          <div className="h-3 bg-[#1c2632] rounded-full overflow-hidden border border-[#2c3e50] p-0.5">
+                            <div
+                              className={`h-full rounded-full transition-all duration-1000 ${storageStats.percentage > 80 ? 'bg-gradient-to-r from-red-600 to-red-400' :
+                                storageStats.percentage > 60 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+                                }`}
+                              style={{ width: `${Math.min(storageStats.percentage, 100)}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between mt-2">
+                            <p className="text-[9px] text-slate-500">{storageStats.percentage}% 使用中</p>
+                            {currentStorageType === STORAGE_TYPES.LOCAL_STORAGE && (
+                              <p className="text-[9px] text-yellow-500/80 italic">※ localStorageはブラウザ制限により容量が非常に小さいです</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {isMigrating && (
+                          <div className="mt-4 p-4 bg-blue-900/10 border border-blue-500/20 rounded-xl flex items-center gap-3">
+                            <Loader className="animate-spin text-blue-400" size={16} />
+                            <p className="text-xs text-blue-200">データを IndexedDB へ移行中... 数分かかる場合があります。</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
               <footer className="text-center p-12 opacity-20 text-[10px] font-serif italic tracking-[0.2em] uppercase">
                 Tsunovel Core Interface v5.2.0 - Crystalized Prototype
               </footer>
