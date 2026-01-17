@@ -123,7 +123,8 @@ export const getStorageType = () => {
     } catch (e) {
         console.error('Failed to get storage type:', e);
     }
-    return STORAGE_TYPES.LOCAL_STORAGE;
+    // Default to IndexedDB if available, otherwise localStorage
+    return isIndexedDBAvailable() ? STORAGE_TYPES.INDEXED_DB : STORAGE_TYPES.LOCAL_STORAGE;
 };
 
 /**
