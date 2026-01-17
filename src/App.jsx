@@ -249,13 +249,42 @@ export default function Tsunovel() {
   };
 
   // 全小説のダウンロードステータスを一括更新（初期表示用）
+  // info（総話数）がない場合は先に info.json を取得
   const refreshAllDownloadStatuses = async () => {
     if (!novels || novels.length === 0) return;
-    // 重い処理なので並列実行数を制限するか、順次実行
+
     for (const novel of novels) {
-      if (novel.ncode) {
-        await updateDownloadStatusCache(novel.id);
+      if (!novel.ncode) continue;
+
+      // info.general_all_no がない場合は info.json を取得
+      if (!novel.info?.general_all_no) {
+        try {
+          const ncodeLower = novel.ncode.toLowerCase();
+          const infoUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/info.json`;
+          const fetchOptions = githubConfig.pat ? {
+            headers: {
+              'Authorization': `Bearer ${githubConfig.pat}`,
+              'Accept': 'application/vnd.github.v3.raw',
+            }
+          } : {};
+
+          const infoRes = await fetch(infoUrl, fetchOptions);
+          if (infoRes.ok) {
+            const infoData = JSON.parse(await infoRes.text());
+            // novels を更新して general_all_no を設定
+            setNovels(prev => prev.map(n =>
+              n.id === novel.id ? { ...n, info: { ...n.info, ...infoData } } : n
+            ));
+            // 更新後の novel を使用
+            novel.info = { ...novel.info, ...infoData };
+          }
+        } catch (e) {
+          console.error(`Failed to load info for ${novel.ncode}:`, e);
+        }
       }
+
+      // ダウンロードステータスを更新
+      await updateDownloadStatusCache(novel.id);
     }
   };
 
