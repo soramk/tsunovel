@@ -100,7 +100,14 @@ const INITIAL_NOVELS = [];
 
 export default function Tsunovel() {
   const [novels, setNovels] = useState(INITIAL_NOVELS);
-  const [currentNovelId, setCurrentNovelId] = useState(() => localStorage.getItem('tsunovel_session_currentNovelId') || null);
+  const [currentNovelId, setCurrentNovelId] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_session_currentNovelId');
+    // Restore numeric ID if applicable (for non-ncode novels)
+    if (saved && /^\d+$/.test(saved)) {
+      return Number(saved);
+    }
+    return saved || null;
+  });
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('tsunovel_session_viewMode') || 'library');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -397,11 +404,25 @@ export default function Tsunovel() {
   // Restore Reader Session
   useEffect(() => {
     if (novels.length > 0 && viewMode === 'reader' && currentNovelId && readerChapters.length === 0 && !isLoadingChapter) {
-      // Find the novel to ensure it exists
-      const novel = novels.find(n => n.id === currentNovelId);
+      // Validating currentNovelId against loaded novels
+      // Use loose equality to find novel even if types mismatch (string vs number)
+      const novel = novels.find(n => n.id == currentNovelId);
+
       if (novel) {
+        // Fix ID type mismatch if necessary
+        if (novel.id !== currentNovelId) {
+          console.log('Fixing ID type mismatch:', currentNovelId, '->', novel.id);
+          setCurrentNovelId(novel.id);
+          return; // Allow effect to re-run with correct ID
+        }
+
         console.log('Restoring session for:', novel.title, 'Chapter:', currentChapter);
         loadChapter(currentNovelId, currentChapter);
+      } else {
+        // Novel not found in library (deleted or invalid), return to library
+        console.warn('Restored novel not found in library. Returning to library view.');
+        setViewMode('library');
+        setCurrentNovelId(null);
       }
     }
   }, [novels, viewMode, currentNovelId, readerChapters.length]);
@@ -2240,7 +2261,7 @@ export default function Tsunovel() {
                   </div>
                 )}
 
-                {isLoadingChapter && readerChapters.length === 0 ? (
+                {(isLoadingChapter || (currentNovelId && readerChapters.length === 0)) ? (
                   <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
                     <Loader className="animate-spin" />
                     <p>読み込み中...</p>
