@@ -102,13 +102,15 @@ export default function Tsunovel() {
   const [novels, setNovels] = useState(INITIAL_NOVELS);
   const [currentNovelId, setCurrentNovelId] = useState(() => {
     const saved = localStorage.getItem('tsunovel_session_currentNovelId');
-    // Restore numeric ID if applicable (for non-ncode novels)
-    if (saved && /^\d+$/.test(saved)) {
-      return Number(saved);
-    }
-    return saved || null;
+    if (!saved || saved === 'null' || saved === 'undefined') return null;
+    if (/^\d+$/.test(saved)) return Number(saved);
+    return saved;
   });
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('tsunovel_session_viewMode') || 'library');
+  const [viewMode, setViewMode] = useState(() => {
+    const saved = localStorage.getItem('tsunovel_session_viewMode');
+    if (saved === 'reader' || saved === 'settings') return saved;
+    return 'library';
+  });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -127,16 +129,22 @@ export default function Tsunovel() {
 
   // お気に入り & 読書履歴
   const [favorites, setFavorites] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_favorites');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('tsunovel_favorites');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_history');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('tsunovel_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
   const [historyEnabled, setHistoryEnabled] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_history_enabled');
-    return saved ? JSON.parse(saved) : true;
+    try {
+      const saved = localStorage.getItem('tsunovel_history_enabled');
+      return saved ? JSON.parse(saved) : true;
+    } catch (e) { return true; }
   });
 
   useEffect(() => {
@@ -338,17 +346,30 @@ export default function Tsunovel() {
   }, [githubConfig]);
 
   const [readerSettings, setReaderSettings] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_reader_settings');
-    return saved ? JSON.parse(saved) : {
-      theme: 'sepia',
-      fontSize: 18,
-      fontFamily: 'serif',
-      lineHeight: 1.8,
-      textColor: '', // Empty means use theme default
-      transitionMode: 'button', // 'button' or 'scroll'
-      showTitleOnTransition: false, // Whether to show title on each transition
-      showHeaderTitle: true, // Whether to show title in reader header and footer
-    };
+    try {
+      const saved = localStorage.getItem('tsunovel_reader_settings');
+      return saved ? JSON.parse(saved) : {
+        theme: 'sepia',
+        fontSize: 18,
+        fontFamily: 'serif',
+        lineHeight: 1.8,
+        textColor: '',
+        transitionMode: 'button',
+        showTitleOnTransition: false,
+        showHeaderTitle: true,
+      };
+    } catch (e) {
+      return {
+        theme: 'sepia',
+        fontSize: 18,
+        fontFamily: 'serif',
+        lineHeight: 1.8,
+        textColor: '',
+        transitionMode: 'button',
+        showTitleOnTransition: false,
+        showHeaderTitle: true,
+      };
+    }
   });
 
   useEffect(() => {
@@ -1295,8 +1316,8 @@ export default function Tsunovel() {
   return (
     <div className="min-h-screen bg-[#141d26] text-gray-100 font-sans selection:bg-blue-500 selection:text-white overflow-x-hidden">
 
-      {/* --- Library Mode --- */}
-      {viewMode === 'library' && (
+      {/* --- Library Mode (Default) --- */}
+      {(viewMode === 'library' || (viewMode !== 'reader' && viewMode !== 'settings')) && (
         <div className="relative min-h-screen overflow-hidden">
           {/* Background Image */}
           <div
