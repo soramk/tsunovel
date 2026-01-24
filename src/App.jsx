@@ -99,47 +99,89 @@ const GENRE_MAP = {
 const INITIAL_NOVELS = [];
 
 export default function Tsunovel() {
+  // --- 1. State & Ref Declarations ---
   const [novels, setNovels] = useState(INITIAL_NOVELS);
+
+  // Session Persistence States
   const [currentNovelId, setCurrentNovelId] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_session_currentNovelId');
-    if (!saved || saved === 'null' || saved === 'undefined') return null;
-    if (/^\d+$/.test(saved)) return Number(saved);
-    return saved;
+    try {
+      const saved = localStorage.getItem('tsunovel_session_currentNovelId');
+      if (!saved || saved === 'null' || saved === 'undefined') return null;
+      if (/^\d+$/.test(saved)) return Number(saved);
+      return saved;
+    } catch (e) { return null; }
   });
+
   const [viewMode, setViewMode] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_session_viewMode');
-    if (saved === 'reader' || saved === 'settings') return saved;
-    return 'library';
+    try {
+      const saved = localStorage.getItem('tsunovel_session_viewMode');
+      if (saved === 'reader' || saved === 'settings') return saved;
+      return 'library';
+    } catch (e) { return 'library'; }
   });
+
+  const [currentChapter, setCurrentChapter] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tsunovel_session_currentChapter');
+      return (saved && !isNaN(parseInt(saved))) ? parseInt(saved) : 1;
+    } catch (e) { return 1; }
+  });
+
+  const [selectedNovelId, setSelectedNovelId] = useState(() => {
+    try {
+      return localStorage.getItem('tsunovel_session_selectedNovelId') || null;
+    } catch (e) { return null; }
+  });
+
+  // UI & Action States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  // アニメーション制御用ステート
   const [openingBookId, setOpeningBookId] = useState(null);
-  const [selectedNovelId, setSelectedNovelId] = useState(() => localStorage.getItem('tsunovel_session_selectedNovelId') || null); // 詳細モーダル用
-  const [isUpdateOptionsOpen, setIsUpdateOptionsOpen] = useState(false); // 更新オプション用
+  const [isUpdateOptionsOpen, setIsUpdateOptionsOpen] = useState(false);
   const [updateEpisodesInput, setUpdateEpisodesInput] = useState('');
-
-  // フィルタリング用ステート
-  const [selectedGenre, setSelectedGenre] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_selected_genre');
-    return saved || 'all';
-  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [loadingChapters, setLoadingChapters] = useState(new Set());
+  const [addMode, setAddMode] = useState('search');
+  const [urlInput, setUrlInput] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
+  const [isPrepending, setIsPrepending] = useState(false);
+  const [readerChapters, setReaderChapters] = useState([]);
+  const [isLoadingChapter, setIsLoadingChapter] = useState(false);
+  const [isLoadingIndex, setIsLoadingIndex] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [isStorageSettingsOpen, setIsStorageSettingsOpen] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [storageStats, setStorageStats] = useState(null);
+  const [downloadStatuses, setDownloadStatuses] = useState({});
 
-  // お気に入り & 読書履歴
+  // Refs
+  const scrollRef = useRef({ height: 0, top: 0 });
+  const settingsRef = useRef(null);
+
+  // Persistent Settings
+  const [selectedGenre, setSelectedGenre] = useState(() => {
+    return localStorage.getItem('tsunovel_selected_genre') || 'all';
+  });
+
   const [favorites, setFavorites] = useState(() => {
     try {
       const saved = localStorage.getItem('tsunovel_favorites');
       return saved ? JSON.parse(saved) : [];
     } catch (e) { return []; }
   });
+
   const [history, setHistory] = useState(() => {
     try {
       const saved = localStorage.getItem('tsunovel_history');
       return saved ? JSON.parse(saved) : [];
     } catch (e) { return []; }
   });
+
   const [historyEnabled, setHistoryEnabled] = useState(() => {
     try {
       const saved = localStorage.getItem('tsunovel_history_enabled');
@@ -147,6 +189,41 @@ export default function Tsunovel() {
     } catch (e) { return true; }
   });
 
+  const [githubConfig, setGithubConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tsunovel_github_config');
+      return saved ? JSON.parse(saved) : { owner: 'soramk', repo: 'tsunovel', pat: '' };
+    } catch (e) {
+      return { owner: 'soramk', repo: 'tsunovel', pat: '' };
+    }
+  });
+  const [tempGithubConfig, setTempGithubConfig] = useState(githubConfig);
+
+  const [bookmarks, setBookmarks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tsunovel_bookmarks');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
+  });
+
+  const [readerSettings, setReaderSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tsunovel_reader_settings');
+      return saved ? JSON.parse(saved) : {
+        theme: 'sepia', fontSize: 18, fontFamily: 'serif', lineHeight: 1.8,
+        textColor: '', transitionMode: 'button', showTitleOnTransition: false, showHeaderTitle: true,
+      };
+    } catch (e) {
+      return {
+        theme: 'sepia', fontSize: 18, fontFamily: 'serif', lineHeight: 1.8,
+        textColor: '', transitionMode: 'button', showTitleOnTransition: false, showHeaderTitle: true,
+      };
+    }
+  });
+
+  const [currentStorageType, setCurrentStorageType] = useState(() => getStorageType());
+
+  // --- 2. Persistence Effects ---
   useEffect(() => {
     localStorage.setItem('tsunovel_favorites', JSON.stringify(favorites));
   }, [favorites]);
@@ -163,7 +240,6 @@ export default function Tsunovel() {
     localStorage.setItem('tsunovel_selected_genre', selectedGenre);
   }, [selectedGenre]);
 
-  // Session Persistence Effects
   useEffect(() => {
     localStorage.setItem('tsunovel_session_viewMode', viewMode);
   }, [viewMode]);
@@ -182,31 +258,19 @@ export default function Tsunovel() {
     if (currentChapter) localStorage.setItem('tsunovel_session_currentChapter', currentChapter);
   }, [currentChapter]);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [loadingChapters, setLoadingChapters] = useState(new Set());
-  const [addMode, setAddMode] = useState('search'); // 'search' or 'url'
-  const [urlInput, setUrlInput] = useState('');
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState('');
-  const [isPrepending, setIsPrepending] = useState(false);
-  const scrollRef = useRef({ height: 0, top: 0 });
-  const [githubConfig, setGithubConfig] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_github_config');
-    return saved ? JSON.parse(saved) : {
-      owner: 'soramk',
-      repo: 'tsunovel',
-      pat: '',
-    };
-  });
-  const [tempGithubConfig, setTempGithubConfig] = useState(githubConfig);
+  useEffect(() => {
+    localStorage.setItem('tsunovel_bookmarks', JSON.stringify(bookmarks));
+  }, [bookmarks]);
 
-  // オフラインストレージ設定
-  const [currentStorageType, setCurrentStorageType] = useState(() => getStorageType());
-  const [storageStats, setStorageStats] = useState(null);
-  const [isStorageSettingsOpen, setIsStorageSettingsOpen] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
+  useEffect(() => {
+    localStorage.setItem('tsunovel_github_config', JSON.stringify(githubConfig));
+  }, [githubConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('tsunovel_reader_settings', JSON.stringify(readerSettings));
+  }, [readerSettings]);
+
+
 
   // ストレージ統計を更新
   const refreshStorageStats = async () => {
@@ -249,7 +313,7 @@ export default function Tsunovel() {
     await refreshStorageStats();
   };
 
-  const [downloadStatuses, setDownloadStatuses] = useState({});
+
 
   // 特定の小説のダウンロードステータスを非同期で更新
   const updateDownloadStatusCache = async (novelId) => {
@@ -330,58 +394,7 @@ export default function Tsunovel() {
   }, [novels?.length, currentStorageType]);
 
 
-  // 小説ごとのしおり（最新読了話数）
-  const [bookmarks, setBookmarks] = useState(() => {
-    const saved = localStorage.getItem('tsunovel_bookmarks');
-    return saved ? JSON.parse(saved) : {};
-  });
 
-  useEffect(() => {
-    localStorage.setItem('tsunovel_bookmarks', JSON.stringify(bookmarks));
-  }, [bookmarks]);
-
-  // 設定が変更されたら localStorage に保存
-  useEffect(() => {
-    localStorage.setItem('tsunovel_github_config', JSON.stringify(githubConfig));
-  }, [githubConfig]);
-
-  const [readerSettings, setReaderSettings] = useState(() => {
-    try {
-      const saved = localStorage.getItem('tsunovel_reader_settings');
-      return saved ? JSON.parse(saved) : {
-        theme: 'sepia',
-        fontSize: 18,
-        fontFamily: 'serif',
-        lineHeight: 1.8,
-        textColor: '',
-        transitionMode: 'button',
-        showTitleOnTransition: false,
-        showHeaderTitle: true,
-      };
-    } catch (e) {
-      return {
-        theme: 'sepia',
-        fontSize: 18,
-        fontFamily: 'serif',
-        lineHeight: 1.8,
-        textColor: '',
-        transitionMode: 'button',
-        showTitleOnTransition: false,
-        showHeaderTitle: true,
-      };
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('tsunovel_reader_settings', JSON.stringify(readerSettings));
-  }, [readerSettings]);
-
-  const [currentChapter, setCurrentChapter] = useState(() => parseInt(localStorage.getItem('tsunovel_session_currentChapter')) || 1);
-  const [readerChapters, setReaderChapters] = useState([]); // [{ chapterNum, content, title }]
-  const [isLoadingChapter, setIsLoadingChapter] = useState(false);
-  const [isLoadingIndex, setIsLoadingIndex] = useState(false);
-  const [loadError, setLoadError] = useState(null);
-  const settingsRef = useRef(null);
 
   // 初期読み込み: storage/index.json から小説一覧を取得
   useEffect(() => {
@@ -1206,7 +1219,7 @@ export default function Tsunovel() {
     };
   };
 
-  const [isTocOpen, setIsTocOpen] = useState(false);
+
   const currentNovel = novels.find(n => n.id === currentNovelId);
 
   // スクロール位置の調整（前章 prepend 時）
@@ -2179,7 +2192,7 @@ export default function Tsunovel() {
                   </div>
                   <div className="flex-1 overflow-y-auto p-2">
                     {currentNovel?.info?.general_all_no ? (
-                      Array.from({ length: currentNovel.info.general_all_no }, (_, i) => i + 1).map(num => (
+                      Array.from({ length: currentNovel?.info?.general_all_no || 0 }, (_, i) => i + 1).map(num => (
                         <button
                           key={num}
                           onClick={() => {
@@ -2195,7 +2208,7 @@ export default function Tsunovel() {
                             第 {num} 話
                           </span>
                           {bookmarks[currentNovelId] === num && (
-                            <Bookmark size={12} className="text-indigo-400Fill" />
+                            <Bookmark size={12} className="text-indigo-400" />
                           )}
                         </button>
                       ))
