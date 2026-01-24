@@ -100,14 +100,14 @@ const INITIAL_NOVELS = [];
 
 export default function Tsunovel() {
   const [novels, setNovels] = useState(INITIAL_NOVELS);
-  const [currentNovelId, setCurrentNovelId] = useState(null);
-  const [viewMode, setViewMode] = useState('library');
+  const [currentNovelId, setCurrentNovelId] = useState(() => localStorage.getItem('tsunovel_session_currentNovelId') || null);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('tsunovel_session_viewMode') || 'library');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // アニメーション制御用ステート
   const [openingBookId, setOpeningBookId] = useState(null);
-  const [selectedNovelId, setSelectedNovelId] = useState(null); // 詳細モーダル用
+  const [selectedNovelId, setSelectedNovelId] = useState(() => localStorage.getItem('tsunovel_session_selectedNovelId') || null); // 詳細モーダル用
   const [isUpdateOptionsOpen, setIsUpdateOptionsOpen] = useState(false); // 更新オプション用
   const [updateEpisodesInput, setUpdateEpisodesInput] = useState('');
 
@@ -147,6 +147,25 @@ export default function Tsunovel() {
   useEffect(() => {
     localStorage.setItem('tsunovel_selected_genre', selectedGenre);
   }, [selectedGenre]);
+
+  // Session Persistence Effects
+  useEffect(() => {
+    localStorage.setItem('tsunovel_session_viewMode', viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (currentNovelId) localStorage.setItem('tsunovel_session_currentNovelId', currentNovelId);
+    else localStorage.removeItem('tsunovel_session_currentNovelId');
+  }, [currentNovelId]);
+
+  useEffect(() => {
+    if (selectedNovelId) localStorage.setItem('tsunovel_session_selectedNovelId', selectedNovelId);
+    else localStorage.removeItem('tsunovel_session_selectedNovelId');
+  }, [selectedNovelId]);
+
+  useEffect(() => {
+    if (currentChapter) localStorage.setItem('tsunovel_session_currentChapter', currentChapter);
+  }, [currentChapter]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -329,7 +348,7 @@ export default function Tsunovel() {
     localStorage.setItem('tsunovel_reader_settings', JSON.stringify(readerSettings));
   }, [readerSettings]);
 
-  const [currentChapter, setCurrentChapter] = useState(1);
+  const [currentChapter, setCurrentChapter] = useState(() => parseInt(localStorage.getItem('tsunovel_session_currentChapter')) || 1);
   const [readerChapters, setReaderChapters] = useState([]); // [{ chapterNum, content, title }]
   const [isLoadingChapter, setIsLoadingChapter] = useState(false);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
@@ -374,6 +393,18 @@ export default function Tsunovel() {
     };
     loadIndex();
   }, [githubConfig.owner, githubConfig.repo, githubConfig.pat]);
+
+  // Restore Reader Session
+  useEffect(() => {
+    if (novels.length > 0 && viewMode === 'reader' && currentNovelId && readerChapters.length === 0 && !isLoadingChapter) {
+      // Find the novel to ensure it exists
+      const novel = novels.find(n => n.id === currentNovelId);
+      if (novel) {
+        console.log('Restoring session for:', novel.title, 'Chapter:', currentChapter);
+        loadChapter(currentNovelId, currentChapter);
+      }
+    }
+  }, [novels, viewMode, currentNovelId, readerChapters.length]);
 
   // 設定パネルの外側クリックで閉じる (リーダー内のクイック設定用)
   useEffect(() => {
