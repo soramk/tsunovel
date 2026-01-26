@@ -9,10 +9,17 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* モバイルでの画面の浮き（オーバースクロール）を防止 */
+    overscroll-behavior-y: none;
   }
 }
 
 @layer utilities {
+  .no-zoom {
+    /* ピンチズームやダブルタップズームを防止し、スクロールのみ許可 */
+    touch-action: pan-y;
+  }
+
   .preserve-3d {
     transform-style: preserve-3d;
   }

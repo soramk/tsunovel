@@ -2279,7 +2279,7 @@ export default function Tsunovel() {
             </footer>
 
             {/* Reader Content */}
-            <div className={`${getReaderStyles().className} pt-24`} style={getReaderStyles().style}>
+            <div className={`${getReaderStyles().className} pt-24 no-zoom`} style={getReaderStyles().style}>
               <div className="max-w-2xl mx-auto pb-32">
                 {(readerSettings.transitionMode === 'scroll' || (readerSettings.transitionMode === 'button' && readerSettings.showTitleOnTransition)) && (
                   <div className="mb-12 text-center border-b border-current/10 pb-8">
