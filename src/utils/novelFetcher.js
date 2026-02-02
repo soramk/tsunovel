@@ -3,6 +3,31 @@
  * バックエンドAPIを使用しない実装
  */
 
+const FETCH_TIMEOUT = 15000; // 15秒タイムアウト
+
+/**
+ * タイムアウト付き fetch ヘルパー関数
+ * モバイルでバックグラウンド復帰後などネットワークが不安定な状態でハングを防止
+ */
+const fetchWithTimeout = async (url, options = {}, timeout = FETCH_TIMEOUT) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`リクエストがタイムアウトしました (${timeout / 1000}秒)`);
+    }
+    throw error;
+  }
+};
 /**
  * URLからncodeを抽出
  */
@@ -72,7 +97,7 @@ export async function fetchSyosetuNovel(url) {
   const apiUrl = `https://api.syosetu.com/novelapi/api/?out=json&of=t-w-s-gf-gl-g&ncode=${ncode}`;
 
   try {
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',

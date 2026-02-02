@@ -2,6 +2,31 @@
  * GitHub APIを使用してWorkflowをトリガーし、結果をポーリングするユーティリティ
  */
 
+const FETCH_TIMEOUT = 15000; // 15秒タイムアウト
+
+/**
+ * タイムアウト付き fetch ヘルパー関数
+ * モバイルでバックグラウンド復帰後などネットワークが不安定な状態でハングを防止
+ */
+const fetchWithTimeout = async (url, options = {}, timeout = FETCH_TIMEOUT) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error(`リクエストがタイムアウトしました (${timeout / 1000}秒)`);
+        }
+        throw error;
+    }
+};
 /**
  * GitHubのリポジトリにrepository_dispatchイベントを送信する
  */
@@ -9,7 +34,7 @@ export async function triggerFetch(ncode, config, type = 'full', episodes = '') 
     const { owner, repo, pat } = config;
     const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${pat}`,
@@ -41,7 +66,7 @@ export async function triggerRemove(ncode, config) {
     const { owner, repo, pat } = config;
     const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${pat}`,
@@ -85,7 +110,7 @@ export async function pollData(ncode, config) {
     return new Promise((resolve, reject) => {
         const poll = async () => {
             try {
-                const response = await fetch(url, fetchOptions);
+                const response = await fetchWithTimeout(url, fetchOptions);
 
                 if (response.ok) {
                     const text = await response.text();
@@ -137,7 +162,7 @@ export async function fetchIndex(config) {
     console.log('PAT set:', !!config.pat);
 
     try {
-        const response = await fetch(url, fetchOptions);
+        const response = await fetchWithTimeout(url, fetchOptions);
         console.log('Response Status:', response.status, response.statusText);
 
         if (response.ok) {

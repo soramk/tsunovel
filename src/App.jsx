@@ -482,6 +482,31 @@ export default function Tsunovel() {
   const RATE_LIMIT_DELAY = 150;
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 1000;
+  const FETCH_TIMEOUT = 10000; // 10秒タイムアウト
+
+  /**
+   * タイムアウト付き fetch ヘルパー関数
+   * モバイルでバックグラウンド復帰後などネットワークが不安定な状態でハングを防止
+   */
+  const fetchWithTimeout = async (url, options = {}, timeout = FETCH_TIMEOUT) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`リクエストがタイムアウトしました (${timeout / 1000}秒)`);
+      }
+      throw error;
+    }
+  };
 
   /**
    * Pre-download entire novel or specified range for offline reading
@@ -550,7 +575,7 @@ export default function Tsunovel() {
 
         while (retryCount < MAX_RETRIES) {
           try {
-            contentRes = await fetch(chapterUrl, fetchOptions);
+            contentRes = await fetchWithTimeout(chapterUrl, fetchOptions);
             if (contentRes.status === 403 || contentRes.status === 429) {
               const waitTime = RETRY_DELAY * (retryCount + 1);
               setDownloadProgress(`APIレート制限。${Math.ceil(waitTime / 1000)}秒後に再試行...`);
@@ -817,7 +842,7 @@ export default function Tsunovel() {
           }
         } : {};
 
-        const contentRes = await fetch(chapterUrl, fetchOptions);
+        const contentRes = await fetchWithTimeout(chapterUrl, fetchOptions);
         if (contentRes.ok) {
           novelContent = await contentRes.text();
 
@@ -831,7 +856,7 @@ export default function Tsunovel() {
           await saveChapter(ncodeLower, chapterNum, novelContent, title);
         } else if (chapterNum === 1) {
           const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
-          const legacyRes = await fetch(legacyUrl, fetchOptions);
+          const legacyRes = await fetchWithTimeout(legacyUrl, fetchOptions);
           if (legacyRes.ok) {
             novelContent = await legacyRes.text();
             await saveChapter(ncodeLower, chapterNum, novelContent, title);
@@ -851,7 +876,7 @@ export default function Tsunovel() {
           }
         } : {};
 
-        const infoRes = await fetch(infoUrl, fetchOptions);
+        const infoRes = await fetchWithTimeout(infoUrl, fetchOptions);
         if (infoRes.ok) {
           const infoText = await infoRes.text();
           try {
