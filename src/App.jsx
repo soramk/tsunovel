@@ -35,7 +35,8 @@ import {
   Trash2,
   Database,
   AlertCircle,
-  Info
+  Info,
+  ExternalLink
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, triggerRemove, pollData, fetchIndex } from './utils/githubActions';
@@ -1754,6 +1755,35 @@ export default function Tsunovel() {
                           </button>
                         </div>
                         <p className="text-sm text-blue-300 opacity-80 italic font-serif">{novels.find(n => n.id === selectedNovelId)?.author}</p>
+                        {/* 取得元URLリンク */}
+                        {(() => {
+                          const novel = novels.find(n => n.id === selectedNovelId);
+                          if (!novel?.ncode) return null;
+                          const ncodeLower = novel.ncode.toLowerCase();
+                          // ncodeの形式でサイトを判定（n*はなろう、noc*はノクターン等）
+                          let sourceUrl = '';
+                          let siteName = '';
+                          if (ncodeLower.startsWith('noc')) {
+                            sourceUrl = `https://novel18.syosetu.com/${ncodeLower}/`;
+                            siteName = 'ノクターンノベルズ';
+                          } else if (ncodeLower.startsWith('n')) {
+                            sourceUrl = `https://ncode.syosetu.com/${ncodeLower}/`;
+                            siteName = '小説家になろう';
+                          }
+                          if (!sourceUrl) return null;
+                          return (
+                            <a
+                              href={sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-400 transition-colors group"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink size={14} className="opacity-60 group-hover:opacity-100" />
+                              <span>{siteName}で開く</span>
+                            </a>
+                          );
+                        })()}
                       </div>
                       <button onClick={() => setSelectedNovelId(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white">
                         <X size={20} />
