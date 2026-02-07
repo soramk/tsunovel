@@ -42,6 +42,24 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "storage: fetch novel data for ${{ github.event.client_payload.ncode }}"
-            git pull --rebase origin main
-            git push origin main
+            
+            # リトライロジック（最大3回）
+            max_retries=3
+            retry_count=0
+            while [ $retry_count -lt $max_retries ]; do
+              git pull --rebase origin main
+              if git push origin main; then
+                echo "Push succeeded"
+                break
+              else
+                retry_count=$((retry_count + 1))
+                if [ $retry_count -lt $max_retries ]; then
+                  echo "Push failed, retrying in 5 seconds... (attempt $retry_count/$max_retries)"
+                  sleep 5
+                else
+                  echo "Push failed after $max_retries attempts"
+                  exit 1
+                fi
+              fi
+            done
           fi
