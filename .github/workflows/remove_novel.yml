@@ -4,8 +4,9 @@ on:
   repository_dispatch:
     types: [remove-novel]
 
+# すべてのストレージ更新ワークフローで同じグループを使用して直列化
 concurrency:
-  group: remove-novel
+  group: storage-update
   cancel-in-progress: false
 
 jobs:
@@ -17,6 +18,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,23 +45,32 @@ jobs:
           else
             git commit -m "storage: remove novel data for ${{ github.event.client_payload.ncode }}"
             
-            # リトライロジック（最大3回）
-            max_retries=3
+            # リトライロジック（最大5回）
+            max_retries=5
             retry_count=0
             while [ $retry_count -lt $max_retries ]; do
-              git pull --rebase origin main
-              if git push origin main; then
-                echo "Push succeeded"
-                break
-              else
-                retry_count=$((retry_count + 1))
-                if [ $retry_count -lt $max_retries ]; then
-                  echo "Push failed, retrying in 5 seconds... (attempt $retry_count/$max_retries)"
-                  sleep 5
-                else
-                  echo "Push failed after $max_retries attempts"
-                  exit 1
+              # 最新のリモート状態を取得
+              git fetch origin main
+              
+              # リベースを試行
+              if git rebase origin/main; then
+                # プッシュを試行
+                if git push origin main; then
+                  echo "Push succeeded"
+                  exit 0
                 fi
+              else
+                # リベース失敗時はabortしてリトライ
+                git rebase --abort 2>/dev/null || true
+              fi
+              
+              retry_count=$((retry_count + 1))
+              if [ $retry_count -lt $max_retries ]; then
+                echo "Push failed, retrying in 10 seconds... (attempt $retry_count/$max_retries)"
+                sleep 10
+              else
+                echo "Push failed after $max_retries attempts"
+                exit 1
               fi
             done
           fi
