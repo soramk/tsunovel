@@ -36,7 +36,9 @@ import {
   Database,
   AlertCircle,
   Info,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  WifiOff
 } from 'lucide-react';
 import { fetchNovelContent, extractNcode, searchNarou } from './utils/novelFetcher';
 import { triggerFetch, triggerRemove, pollData, fetchIndex } from './utils/githubActions';
@@ -154,6 +156,8 @@ export default function Tsunovel() {
   const [isLoadingChapter, setIsLoadingChapter] = useState(false);
   const [isLoadingIndex, setIsLoadingIndex] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [chapterLoadError, setChapterLoadError] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isStorageSettingsOpen, setIsStorageSettingsOpen] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -163,6 +167,8 @@ export default function Tsunovel() {
   // Refs
   const scrollRef = useRef({ height: 0, top: 0 });
   const settingsRef = useRef(null);
+  const loadingTimeoutRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // Persistent Settings
   const [selectedGenre, setSelectedGenre] = useState(() => {
@@ -270,6 +276,119 @@ export default function Tsunovel() {
   useEffect(() => {
     localStorage.setItem('tsunovel_reader_settings', JSON.stringify(readerSettings));
   }, [readerSettings]);
+
+  // --- バックグラウンド復帰 & ネットワーク切り替え検知 ---
+  useEffect(() => {
+    // visibilitychange: バックグラウンドから復帰した際の処理
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Recovery] Page became visible, checking state...');
+
+        // ローディング中だった場合、進行中のリクエストをキャンセルして状態をリセット
+        if (isLoadingChapter && viewMode === 'reader') {
+          console.log('[Recovery] Loading was in progress, resetting and retrying...');
+
+          // 進行中のAbortControllerをキャンセル
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+          }
+
+          // タイムアウトをクリア
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+            loadingTimeoutRef.current = null;
+          }
+
+          // ローディング状態をリセット
+          setIsLoadingChapter(false);
+          setLoadingChapters(new Set());
+
+          // readerChaptersが空（まだ何も表示されていない）場合はリトライ
+          if (readerChapters.length === 0 && currentNovelId) {
+            console.log('[Recovery] Retrying chapter load...');
+            setChapterLoadError(null);
+            // 少し遅延を入れてネットワーク復帰を待つ
+            setTimeout(() => {
+              loadChapter(currentNovelId, currentChapter);
+            }, 500);
+          }
+        }
+      }
+    };
+
+    // online/offline: ネットワーク状態変化の検知
+    const handleOnline = () => {
+      console.log('[Network] Back online');
+      setIsOnline(true);
+
+      // オフラインからオンラインに復帰し、ローディングでハングしていた場合リトライ
+      if (isLoadingChapter && viewMode === 'reader') {
+        // 進行中のリクエストをキャンセル
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+
+        setIsLoadingChapter(false);
+        setLoadingChapters(new Set());
+
+        if (readerChapters.length === 0 && currentNovelId) {
+          setTimeout(() => {
+            setChapterLoadError(null);
+            loadChapter(currentNovelId, currentChapter);
+          }, 1000); // ネットワーク安定を少し待つ
+        }
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('[Network] Went offline');
+      setIsOnline(false);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isLoadingChapter, viewMode, readerChapters.length, currentNovelId, currentChapter]);
+
+  // --- ローディングタイムアウト安全機構 ---
+  // ローディング状態が一定時間以上続いた場合、自動的にリセットする
+  useEffect(() => {
+    if (isLoadingChapter) {
+      const LOADING_TIMEOUT = 30000; // 30秒
+      loadingTimeoutRef.current = setTimeout(() => {
+        console.warn('[Timeout] Loading chapter timed out after 30s, resetting state');
+        // 進行中のリクエストをキャンセル
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        setIsLoadingChapter(false);
+        setLoadingChapters(new Set());
+        if (readerChapters.length === 0) {
+          setChapterLoadError('読み込みがタイムアウトしました。ネットワーク状態を確認してリトライしてください。');
+        }
+      }, LOADING_TIMEOUT);
+
+      return () => {
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+      };
+    }
+  }, [isLoadingChapter, readerChapters.length]);
 
 
 
@@ -801,6 +920,7 @@ export default function Tsunovel() {
 
   /**
    * Load a specific chapter
+   * リトライロジック付き: ネットワークエラー時は自動リトライ（最大2回）
    */
   const loadChapter = async (novelId, chapterNum, mode = 'replace', isPrefetch = false) => {
     const novel = novels.find(n => n.id === novelId);
@@ -818,8 +938,13 @@ export default function Tsunovel() {
 
     if (mode === 'replace' && !isPrefetch) {
       setIsLoadingChapter(true);
+      setChapterLoadError(null);
       setReaderChapters([]);
     }
+
+    // この個別リクエスト用のAbortControllerを作成
+    const localController = new AbortController();
+    abortControllerRef.current = localController;
 
     try {
       const ncodeLower = novel.ncode.toLowerCase();
@@ -834,7 +959,7 @@ export default function Tsunovel() {
         title = cachedChapter.title;
         console.log(`Loaded chapter ${chapterNum} from offline cache (${currentStorageType})`);
       } else {
-        // If not in cache, fetch from GitHub API
+        // If not in cache, fetch from GitHub API (with retry)
         const chapterUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/chapters/${chapterNum}.txt`;
         const fetchOptions = githubConfig.pat ? {
           headers: {
@@ -843,8 +968,47 @@ export default function Tsunovel() {
           }
         } : {};
 
-        const contentRes = await fetchWithTimeout(chapterUrl, fetchOptions);
-        if (contentRes.ok) {
+        const CHAPTER_MAX_RETRIES = 2;
+        let lastError = null;
+        let contentRes = null;
+
+        for (let attempt = 0; attempt <= CHAPTER_MAX_RETRIES; attempt++) {
+          // AbortControllerがキャンセルされていたら中断
+          if (localController.signal.aborted) {
+            throw new Error('リクエストがキャンセルされました');
+          }
+
+          try {
+            contentRes = await fetchWithTimeout(chapterUrl, {
+              ...fetchOptions,
+              signal: localController.signal
+            });
+            if (contentRes.ok) break;
+            // 404は内容がないだけなのでリトライしない
+            if (contentRes.status === 404) break;
+            // レート制限はリトライ対象
+            if (contentRes.status === 403 || contentRes.status === 429) {
+              lastError = new Error(`APIレート制限 (${contentRes.status})`);
+              if (attempt < CHAPTER_MAX_RETRIES) {
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (attempt + 1)));
+                continue;
+              }
+            }
+            break;
+          } catch (fetchError) {
+            lastError = fetchError;
+            // AbortErrorの場合はリトライしない
+            if (fetchError.name === 'AbortError' || localController.signal.aborted) {
+              throw fetchError;
+            }
+            if (attempt < CHAPTER_MAX_RETRIES) {
+              console.log(`[Retry] Chapter ${chapterNum} fetch failed (attempt ${attempt + 1}/${CHAPTER_MAX_RETRIES}), retrying...`);
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (attempt + 1)));
+            }
+          }
+        }
+
+        if (contentRes && contentRes.ok) {
           novelContent = await contentRes.text();
 
           // Extract chapter title
@@ -855,13 +1019,16 @@ export default function Tsunovel() {
 
           // Save to offline storage after successful fetch
           await saveChapter(ncodeLower, chapterNum, novelContent, title);
-        } else if (chapterNum === 1) {
+        } else if (chapterNum === 1 && (!contentRes || contentRes.status === 404)) {
           const legacyUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/storage/${ncodeLower}/content.txt`;
-          const legacyRes = await fetchWithTimeout(legacyUrl, fetchOptions);
+          const legacyRes = await fetchWithTimeout(legacyUrl, { ...fetchOptions, signal: localController.signal });
           if (legacyRes.ok) {
             novelContent = await legacyRes.text();
             await saveChapter(ncodeLower, chapterNum, novelContent, title);
           }
+        } else if (!contentRes && lastError) {
+          // すべてのリトライが失敗した場合
+          throw lastError;
         }
       }
 
@@ -877,14 +1044,19 @@ export default function Tsunovel() {
           }
         } : {};
 
-        const infoRes = await fetchWithTimeout(infoUrl, fetchOptions);
-        if (infoRes.ok) {
-          const infoText = await infoRes.text();
-          try {
-            infoData = JSON.parse(infoText);
-          } catch (e) {
-            console.error('Failed to parse info JSON:', e);
+        try {
+          const infoRes = await fetchWithTimeout(infoUrl, { ...fetchOptions, signal: localController.signal });
+          if (infoRes.ok) {
+            const infoText = await infoRes.text();
+            try {
+              infoData = JSON.parse(infoText);
+            } catch (e) {
+              console.error('Failed to parse info JSON:', e);
+            }
           }
+        } catch (infoError) {
+          // info.jsonの取得失敗は章の表示をブロックしない
+          console.warn('Failed to fetch info.json:', infoError.message);
         }
       }
 
@@ -906,6 +1078,9 @@ export default function Tsunovel() {
         console.log(`Prefetched chapter ${chapterNum}`);
         return;
       }
+
+      // エラー状態をクリア（成功したので）
+      setChapterLoadError(null);
 
       if (mode === 'append') {
         setReaderChapters(prev => {
@@ -938,8 +1113,28 @@ export default function Tsunovel() {
       setBookmarks(prev => ({ ...prev, [novelId]: chapterNum }));
 
     } catch (error) {
+      // AbortErrorは意図的キャンセルなのでエラー表示しない
+      if (error.name === 'AbortError' || localController.signal.aborted) {
+        console.log('[loadChapter] Request was cancelled');
+        return;
+      }
+
       console.error('Error loading chapter:', error);
+
+      // ユーザーにエラーを表示（replaceモードかつ非プリフェッチの場合のみ）
+      if (mode === 'replace' && !isPrefetch) {
+        const errorMsg = !navigator.onLine
+          ? 'ネットワークに接続されていません。オフラインキャッシュにもデータがありません。'
+          : error.message?.includes('タイムアウト')
+            ? 'サーバーへの接続がタイムアウトしました。ネットワーク状態を確認してください。'
+            : `読み込み中にエラーが発生しました: ${error.message || '不明なエラー'}`;
+        setChapterLoadError(errorMsg);
+      }
     } finally {
+      // このリクエストのAbortControllerをクリア
+      if (abortControllerRef.current === localController) {
+        abortControllerRef.current = null;
+      }
       setLoadingChapters(prev => {
         const next = new Set(prev);
         next.delete(chapterNum);
@@ -2350,10 +2545,35 @@ export default function Tsunovel() {
                   </div>
                 )}
 
-                {(isLoadingChapter || (currentNovelId && readerChapters.length === 0)) ? (
+                {(isLoadingChapter || (currentNovelId && readerChapters.length === 0 && !chapterLoadError)) ? (
                   <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
                     <Loader className="animate-spin" />
                     <p>読み込み中...</p>
+                    {!isOnline && (
+                      <p className="text-xs flex items-center gap-1 mt-2">
+                        <WifiOff size={14} />
+                        オフライン — オンラインに戻り次第リトライします
+                      </p>
+                    )}
+                  </div>
+                ) : chapterLoadError ? (
+                  <div className="py-20 flex flex-col items-center justify-center gap-4">
+                    {!isOnline ? <WifiOff size={32} className="opacity-40" /> : <AlertCircle size={32} className="opacity-40" />}
+                    <p className="text-sm opacity-60 text-center max-w-xs">{chapterLoadError}</p>
+                    <button
+                      onClick={() => {
+                        setChapterLoadError(null);
+                        loadChapter(currentNovelId, currentChapter);
+                      }}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-bold text-sm"
+                      style={{
+                        background: 'rgba(128, 128, 128, 0.15)',
+                        hover: 'rgba(128, 128, 128, 0.25)'
+                      }}
+                    >
+                      <RefreshCw size={16} />
+                      リトライ
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-16">
