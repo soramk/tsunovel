@@ -3028,22 +3028,32 @@ export default function Tsunovel() {
                         ※ 改行またはカンマ区切りで複数のURLを入力できます。
                       </p>
 
-                      <div className="mt-6 p-5 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-center justify-between group hover:bg-blue-500/10 transition-all duration-300">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 shadow-inner group-hover:scale-110 transition-transform">
-                            <Coffee size={20} />
+                      <div className="mt-6 space-y-2">
+                        <p className="text-[10px] font-bold text-blue-400/60 uppercase tracking-widest mb-3 ml-1">ランキングから探す</p>
+                        {[
+                          { label: '小説家になろう', desc: '総合ランキング', url: 'https://yomou.syosetu.com/rank/top/', color: 'blue' },
+                          { label: 'ノクターンノベルズ', desc: '男性向け', url: 'https://noc.syosetu.com/rank/top/', color: 'purple' },
+                          { label: 'ミッドナイトノベルズ', desc: '大人向け', url: 'https://mid.syosetu.com/rank/top/', color: 'indigo' },
+                          { label: 'ムーンライトノベルズ', desc: '女性向け', url: 'https://mnlt.syosetu.com/rank/top/', color: 'pink' },
+                          { label: 'ムーンライトノベルズ', desc: 'BL', url: 'https://mnlt.syosetu.com/rank/bltop/', color: 'rose' },
+                        ].map((site, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3.5 bg-blue-500/5 border border-blue-500/10 rounded-2xl flex items-center justify-between group hover:bg-blue-500/10 transition-all duration-300 cursor-pointer"
+                            onClick={() => window.open(site.url, '_blank')}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+                                <ExternalLink size={14} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">{site.label}</p>
+                                <p className="text-[10px] text-slate-500 font-serif italic">{site.desc}</p>
+                              </div>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-600 group-hover:text-blue-400 transition-colors flex-shrink-0" />
                           </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-200">なろうランキングから探す</p>
-                            <p className="text-[10px] text-slate-500 font-serif italic">人気の作品をチェックしましょう</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => window.open('https://yomou.syosetu.com/rank/top/', '_blank')}
-                          className="bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-[10px] font-bold shadow-sm transition-all active:scale-95 border border-white/5 hover:border-white/10"
-                        >
-                          開廊する
-                        </button>
+                        ))}
                       </div>
                     </div>
 
