@@ -65,34 +65,80 @@ export const STORAGE_INFO = {
 
 /**
  * Initialize IndexedDB
+ * - onblocked ハンドラでブロック時のハング防止
+ * - タイムアウトで無限待ちを防止
+ * - 壊れた dbInstance の自動リセット
  */
+const DB_OPEN_TIMEOUT = 5000; // 5秒
+
 const initDB = () => {
     return new Promise((resolve, reject) => {
+        // 既存のインスタンスが有効かチェック
         if (dbInstance) {
-            resolve(dbInstance);
-            return;
+            try {
+                // コネクションが生きているか確認（closePendingでないか）
+                if (dbInstance.objectStoreNames.contains(STORE_NAME)) {
+                    resolve(dbInstance);
+                    return;
+                }
+            } catch (e) {
+                // dbInstance が壊れている場合はリセット
+                console.warn('Cached IDB instance is invalid, reconnecting...', e);
+                dbInstance = null;
+            }
         }
 
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        // タイムアウト処理
+        const timeoutId = setTimeout(() => {
+            console.error('IndexedDB open timed out');
+            reject(new Error('IndexedDB接続がタイムアウトしました'));
+        }, DB_OPEN_TIMEOUT);
 
-        request.onerror = () => {
-            console.error('Failed to open IndexedDB:', request.error);
-            reject(request.error);
-        };
+        try {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onsuccess = () => {
-            dbInstance = request.result;
-            resolve(dbInstance);
-        };
+            request.onerror = () => {
+                clearTimeout(timeoutId);
+                console.error('Failed to open IndexedDB:', request.error);
+                reject(request.error);
+            };
 
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                store.createIndex('ncode', 'ncode', { unique: false });
-                store.createIndex('timestamp', 'timestamp', { unique: false });
-            }
-        };
+            request.onsuccess = () => {
+                clearTimeout(timeoutId);
+                dbInstance = request.result;
+
+                // コネクションが予期せず閉じた場合にキャッシュをリセット
+                dbInstance.onclose = () => {
+                    console.warn('IDB connection closed unexpectedly');
+                    dbInstance = null;
+                };
+                dbInstance.onerror = () => {
+                    console.warn('IDB connection error');
+                    dbInstance = null;
+                };
+
+                resolve(dbInstance);
+            };
+
+            request.onblocked = () => {
+                clearTimeout(timeoutId);
+                console.error('IndexedDB open blocked (another tab may have an older version open)');
+                reject(new Error('IndexedDB接続がブロックされています。他のタブを閉じてください。'));
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    store.createIndex('ncode', 'ncode', { unique: false });
+                    store.createIndex('timestamp', 'timestamp', { unique: false });
+                }
+            };
+        } catch (e) {
+            clearTimeout(timeoutId);
+            console.error('Failed to initiate IndexedDB open:', e);
+            reject(e);
+        }
     });
 };
 

@@ -1629,7 +1629,7 @@ export default function Tsunovel() {
                       <p className="text-red-200 text-sm mb-6">{loadError}</p>
                       <button
                         onClick={() => window.location.reload()}
-                        className="px-6 py-2 bg-red-900/60 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-colors shadow-lg border border-red-500/30"
+                        className="relative z-20 px-6 py-2 bg-red-900/60 hover:bg-red-800 text-white rounded-lg text-sm font-bold transition-colors shadow-lg border border-red-500/30 cursor-pointer"
                       >
                         Retry
                       </button>
@@ -2545,7 +2545,25 @@ export default function Tsunovel() {
                   </div>
                 )}
 
-                {(isLoadingChapter || (currentNovelId && readerChapters.length === 0 && !chapterLoadError)) ? (
+                {chapterLoadError ? (
+                  <div className="py-20 flex flex-col items-center justify-center gap-4">
+                    {!isOnline ? <WifiOff size={32} className="opacity-40" /> : <AlertCircle size={32} className="opacity-40" />}
+                    <p className="text-sm opacity-60 text-center max-w-xs">{chapterLoadError}</p>
+                    <button
+                      onClick={() => {
+                        setChapterLoadError(null);
+                        loadChapter(currentNovelId, currentChapter);
+                      }}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-bold text-sm hover:opacity-80 active:scale-95"
+                      style={{
+                        background: 'rgba(128, 128, 128, 0.15)'
+                      }}
+                    >
+                      <RefreshCw size={16} />
+                      リトライ
+                    </button>
+                  </div>
+                ) : (isLoadingChapter || (currentNovelId && readerChapters.length === 0)) ? (
                   <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
                     <Loader className="animate-spin" />
                     <p>読み込み中...</p>
@@ -2555,25 +2573,6 @@ export default function Tsunovel() {
                         オフライン — オンラインに戻り次第リトライします
                       </p>
                     )}
-                  </div>
-                ) : chapterLoadError ? (
-                  <div className="py-20 flex flex-col items-center justify-center gap-4">
-                    {!isOnline ? <WifiOff size={32} className="opacity-40" /> : <AlertCircle size={32} className="opacity-40" />}
-                    <p className="text-sm opacity-60 text-center max-w-xs">{chapterLoadError}</p>
-                    <button
-                      onClick={() => {
-                        setChapterLoadError(null);
-                        loadChapter(currentNovelId, currentChapter);
-                      }}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-bold text-sm"
-                      style={{
-                        background: 'rgba(128, 128, 128, 0.15)',
-                        hover: 'rgba(128, 128, 128, 0.25)'
-                      }}
-                    >
-                      <RefreshCw size={16} />
-                      リトライ
-                    </button>
                   </div>
                 ) : (
                   <div className="space-y-16">
